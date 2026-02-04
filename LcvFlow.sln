@@ -5,6 +5,12 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LcvFlow.Web", "LcvFlow.Web\LcvFlow.Web.csproj", "{6397DDD9-FF6F-40B8-9F07-D370BD6D95D4}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LcvFlow.Data", "LcvFlow.Data\LcvFlow.Data.csproj", "{61975AA0-0BCE-4593-8D47-507E856134AA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LcvFlow.Domain", "LcvFlow.Domain\LcvFlow.Domain.csproj", "{B8362884-FD52-4007-BFC8-AA08E6550F0A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LcvFlow.Service", "LcvFlow.Service\LcvFlow.Service.csproj", "{97458821-A593-4087-B137-7CE111EA8BA2}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -18,5 +24,17 @@ Global
 		{6397DDD9-FF6F-40B8-9F07-D370BD6D95D4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6397DDD9-FF6F-40B8-9F07-D370BD6D95D4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6397DDD9-FF6F-40B8-9F07-D370BD6D95D4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{61975AA0-0BCE-4593-8D47-507E856134AA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{61975AA0-0BCE-4593-8D47-507E856134AA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{61975AA0-0BCE-4593-8D47-507E856134AA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{61975AA0-0BCE-4593-8D47-507E856134AA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B8362884-FD52-4007-BFC8-AA08E6550F0A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B8362884-FD52-4007-BFC8-AA08E6550F0A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B8362884-FD52-4007-BFC8-AA08E6550F0A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B8362884-FD52-4007-BFC8-AA08E6550F0A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{97458821-A593-4087-B137-7CE111EA8BA2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{97458821-A593-4087-B137-7CE111EA8BA2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{97458821-A593-4087-B137-7CE111EA8BA2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{97458821-A593-4087-B137-7CE111EA8BA2}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
