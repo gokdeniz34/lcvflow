@@ -3,7 +3,6 @@
   <ItemGroup>
     <ProjectReference Include="..\LcvFlow.Service\LcvFlow.Service.csproj" />
     <ProjectReference Include="..\LcvFlow.Domain\LcvFlow.Domain.csproj" />
-    <ProjectReference Include="..\LcvFlow.Data\LcvFlow.Data.csproj" />
   </ItemGroup>
 
   <ItemGroup>

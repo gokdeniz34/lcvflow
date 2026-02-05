@@ -1,6 +1,5 @@
-﻿using LcvFlow.Service.Dtos.Auth;
-
-namespace LcvFlow.Service;
+﻿
+namespace LcvFlow.Service.Dtos.Auth;
 
 public class AuthResultDto
 {

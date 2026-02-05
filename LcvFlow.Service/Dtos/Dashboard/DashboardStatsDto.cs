@@ -1,4 +1,4 @@
-﻿namespace LcvFlow.Service;
+﻿namespace LcvFlow.Service.Dtos.Dashboard;
 
 public class DashboardStatsDto
 {

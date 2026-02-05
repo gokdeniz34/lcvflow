@@ -1,0 +1,129 @@
+@page "/lcv/{Token}"
+@rendermode InteractiveServer
+
+@* Gerekli kütüphaneleri tanıtıyoruz *@
+@using LcvFlow.Service.Dtos.Guest
+@using LcvFlow.Service.Interfaces
+@using LcvFlow.Service.Dtos
+@using LcvFlow.Domain
+
+@* Servislerimizi enjekte ediyoruz *@
+@inject IGuestService GuestService
+@inject NavigationManager NavManager
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card border-0 shadow-lg">
+                <div class="card-header bg-dark text-white p-4">
+                    <h3 class="mb-0 text-center">Etkinlik Katılım Formu</h3>
+                </div>
+                <div class="card-body p-4">
+                    
+                    @if (_showResult)
+                    {
+                        @* Result.Failure içindeki birleştirilmiş hatalar burada patlar *@
+                        <div class="alert @(_resultSuccess ? "alert-success" : "alert-danger") shadow-sm" role="alert">
+                            <h5 class="alert-heading">@(_resultSuccess ? "Harika!" : "Bir Sorun Var")</h5>
+                            <p class="mb-0">@_message</p>
+                        </div>
+                    }
+
+                    <EditForm Model="_rsvpDto" OnValidSubmit="HandleSubmit" FormName="GuestRsvpForm">
+    @* Antiforgery token güvenliği için otomatik eklenir ama bazen manuel istenir *@
+    <AntiforgeryToken />
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">Katılacak mısınız?</label>
+                            <div class="btn-group w-100" role="group">
+                                <input type="radio" class="btn-check" name="attending" id="attending-yes" autocomplete="off" 
+                                       checked="@(_rsvpDto.IsAttending == true)" @onclick="() => SetAttending(true)">
+                                <label class="btn btn-outline-success" for="attending-yes">Evet, Geliyorum</label>
+
+                                <input type="radio" class="btn-check" name="attending" id="attending-no" autocomplete="off" 
+                                       checked="@(_rsvpDto.IsAttending == false)" @onclick="() => SetAttending(false)">
+                                <label class="btn btn-outline-danger" for="attending-no">Hayır, Gelemiyorum</label>
+                            </div>
+                        </div>
+
+                        @if (_rsvpDto.IsAttending)
+                        {
+                            <div class="row mb-3">
+                                <div class="col-6">
+                                    <label class="form-label">Yetişkin Sayısı</label>
+                                    <input type="number" class="form-control" @bind="_rsvpDto.AdultCount" min="1" />
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label">Çocuk Sayısı</label>
+                                    <input type="number" class="form-control" @bind="_rsvpDto.ChildCount" min="0" />
+                                </div>
+                            </div>
+                        }
+
+                        <div class="mb-4">
+                            <label class="form-label">Varsa Notunuz</label>
+                            <textarea class="form-control" @bind="_rsvpDto.Note" rows="3" placeholder="Alerji, özel istek vb."></textarea>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100 py-3 fw-bold" disabled="@_isLoading">
+                            @if (_isLoading)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2"></span>
+                                <span>İşleniyor...</span>
+                            }
+                            else
+                            {
+                                <span>Cevabı Gönder</span>
+                            }
+                        </button>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Token { get; set; } = string.Empty;
+    
+    private GuestRsvpDto _rsvpDto = new GuestRsvpDto();
+    private bool _showResult = false;
+    private bool _resultSuccess = false;
+    private string _message = "";
+    private bool _isLoading = false;
+
+    protected override void OnInitialized()
+    {
+        // URL'den gelen Token'ı DTO'ya bağlıyoruz
+        _rsvpDto.AccessToken = Token;
+        _rsvpDto.IsAttending = true;
+        _rsvpDto.AdultCount = 1;
+    }
+
+    private void SetAttending(bool value)
+    {
+        _rsvpDto.IsAttending = value;
+        if (!value) 
+        {
+            _rsvpDto.AdultCount = 0;
+            _rsvpDto.ChildCount = 0;
+        }
+        else if (_rsvpDto.AdultCount == 0)
+        {
+            _rsvpDto.AdultCount = 1;
+        }
+    }
+
+    private async Task HandleSubmit()
+    {
+        _isLoading = true;
+        _showResult = false;
+
+        // Servise gidiyoruz (Controller yok, direkt erişim!)
+        var result = await GuestService.SubmitRsvpAsync(_rsvpDto);
+
+        _resultSuccess = result.IsSuccess;
+        _message = result.IsSuccess ? "Cevabınız kaydedildi. Teşekkürler!" : result.Message;
+        _showResult = true;
+        _isLoading = false;
+    }
+}

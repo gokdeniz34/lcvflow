@@ -1,6 +1,3 @@
-﻿namespace LcvFlow.Service;
+﻿namespace LcvFlow.Service.Dtos.Guest;
 
-public class GuestListDto
-{
-
-}
+public record GuestListDto(int Id, string FullName, string? PhoneNumber, bool? IsAttending);
