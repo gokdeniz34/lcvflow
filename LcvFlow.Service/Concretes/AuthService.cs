@@ -23,7 +23,7 @@ public class AuthService : IAuthService
 
         if (user == null || !PasswordHelper.Verify(user.PasswordHash,password))
         {
-            return new AuthResultDto { IsSuccess = false, Message = "Hatalı giriş!" };
+            return new AuthResultDto { IsSuccess = false, Message = "Hatali Giris!" };
         }
 
         return new AuthResultDto
