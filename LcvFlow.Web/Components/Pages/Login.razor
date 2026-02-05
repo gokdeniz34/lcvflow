@@ -1,0 +1,51 @@
+@page "/admin/login"
+@using Microsoft.AspNetCore.Components.Forms
+@inject NavigationManager Nav
+
+<div class="login-container d-flex align-items-center justify-content-center"
+    style="height: 100vh; background-color: #f8f9fa;">
+    <div class="card shadow-lg" style="width: 400px; border-radius: 15px;">
+        <div class="card-body p-5">
+            <h3 class="card-title text-center mb-4 fw-bold">LcvFlow Admin</h3>
+
+            @* QueryString'den gelen hata mesajını göster *@
+            @if (!string.IsNullOrEmpty(ErrorMessage))
+            {
+                <div class="alert alert-danger py-2 text-center" role="alert">
+                    <small>@ErrorMessage</small>
+                </div>
+            }
+
+            @* KRİTİK NOKTA: 
+               Blazor 'onclick' yerine standart HTML 'form' kullanıyoruz. 
+               Çünkü Cookie basacak olan AuthController'a gitmemiz şart.
+            *@
+            <form action="/api/auth/login" method="post">
+                <AntiforgeryToken />
+                <div class="mb-3">
+                    <label class="form-label">Kullanıcı Adı</label>
+                    <input type="text" name="username" class="form-control" required />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Şifre</label>
+                    <input type="password" name="password" class="form-control" required />
+                </div>
+                <button type="submit" class="btn btn-primary w-100">Giriş Yap</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string? ErrorMessage;
+
+    protected override void OnInitialized()
+    {
+        // Controller hata verip geri gönderdiğinde QueryString'den hatayı yakalarız
+        var uri = Nav.ToAbsoluteUri(Nav.Uri);
+        if (Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(uri.Query).TryGetValue("error", out var message))
+        {
+            ErrorMessage = message;
+        }
+    }
+}
