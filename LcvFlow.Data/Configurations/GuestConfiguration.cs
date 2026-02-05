@@ -1,5 +1,4 @@
-﻿using LcvFlow.Domain;
-using LcvFlow.Domain.Guests;
+﻿using LcvFlow.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 

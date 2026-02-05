@@ -1,6 +1,6 @@
 ﻿using LcvFlow.Domain.Common;
 
-namespace LcvFlow.Domain.Guests;
+namespace LcvFlow.Domain.Entities;
 
 public class Guest : BaseEntity
 {
@@ -9,15 +9,17 @@ public class Guest : BaseEntity
     public string? Email { get; set; }
     public string? PhoneNumber { get; set; }
 
-    // LCV (RSVP) Mantığı
-    public bool? IsAttending { get; set; } // null: Cevap vermedi, true: Geliyor, false: Gelmiyor
-    public int AdultCount { get; set; } = 1; // Kaç yetişkin?
-    public int ChildCount { get; set; } = 0; // Kaç çocuk?
+    public bool? IsAttending { get; set; }
+    public int AdultCount { get; set; } = 1;
+    public int ChildCount { get; set; } = 0;
 
     // Güvenlik ve Erişim
-    public string AccessToken { get; set; } = Guid.NewGuid().ToString("N"); // Linkteki benzersiz kod (örn: ...?token=a1b2c3)
+    public string AccessToken { get; set; } = Guid.NewGuid().ToString("N");
 
     // Ekstra Bilgiler
     public string? Note { get; set; } // Misafirin iletmek istediği not (Alerji, tebrik vb.)
     public string? TableNumber { get; set; } // Admin tarafından atanacak masa numarası
+
+    public int EventId { get; set; }
+    public Event Event { get; set; } = null!;
 }

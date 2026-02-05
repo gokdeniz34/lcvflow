@@ -1,6 +1,6 @@
 ﻿using LcvFlow.Data.Context;
-using LcvFlow.Domain;
-using LcvFlow.Domain.Guests;
+using LcvFlow.Domain.Entities;
+using LcvFlow.Domain.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
 namespace LcvFlow.Data.Repositories;
