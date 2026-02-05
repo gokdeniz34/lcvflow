@@ -1,0 +1,52 @@
+@inherits LayoutComponentBase
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Routing
+
+<div class="admin-container" style="display: flex; min-height: 100vh;">
+    <div class="sidebar bg-dark text-white p-3" style="width: 260px;">
+        <h4 class="text-center mb-4 border-bottom pb-3">LcvFlow Admin</h4>
+        <ul class="nav flex-column">
+            <li class="nav-item mb-2">
+                <NavLink class="nav-link text-white d-flex align-items-center" href="/admin/dashboard"
+                    Match="NavLinkMatch.All">
+                    <span class="me-2">📊</span> Dashboard
+                </NavLink>
+            </li>
+            <li class="nav-item mb-2">
+                <NavLink class="nav-link text-white d-flex align-items-center" href="/admin/guests">
+                    <span class="me-2">👥</span> Misafirler
+                </NavLink>
+            </li>
+            <li class="nav-item mb-2">
+                <NavLink class="nav-link text-white d-flex align-items-center" href="/admin/events">
+                    <span class="me-2">📅</span> Etkinliklerim
+                </NavLink>
+            </li>
+        </ul>
+        <hr />
+        <div class="mt-auto">
+            <a href="/api/auth/logout" class="btn btn-outline-danger w-100 btn-sm">
+                <i class="bi bi-box-arrow-right"></i> Çıkış Yap
+            </a>
+        </div>
+    </div>
+
+    <div class="main-content flex-grow-1 bg-light p-4">
+        <header class="d-flex justify-content-between align-items-center mb-4">
+            <h5 class="text-muted">Hoş geldin, Mentor!</h5>
+        </header>
+        @Body
+    </div>
+</div>
+
+<style>
+    .nav-link:hover {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+    }
+
+    .nav-link.active {
+        background: #0d6efd !important;
+        border-radius: 8px;
+    }
+</style>

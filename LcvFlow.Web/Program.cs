@@ -1,43 +1,45 @@
 using Serilog;
 using LcvFlow.Web.Components;
-using LcvFlow.Data;
-using LcvFlow.Data.Context;
-using Microsoft.EntityFrameworkCore;
+using LcvFlow.Data; // Extension metotlar için
+using LcvFlow.Service; // Extension metotlar için
+using LcvFlow.Web.Middlewares;
+using Microsoft.AspNetCore.Authentication.Cookies;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-
-Serilog.Debugging.SelfLog.Enable(msg => Console.WriteLine(msg));
-
+// --- 1. LOGGING (En Başta) ---
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Information()
     .Enrich.FromLogContext()
     .WriteTo.MySQL(
-        connectionString: connectionString,
-        tableName: "Logs",
-        storeTimestampInUtc: true
-    )
+        connectionString: builder.Configuration.GetConnectionString("DefaultConnection"),
+        tableName: "Logs")
     .CreateLogger();
 
-Log.Information("testtt gökk");
+// --- 2. LAYER REGISTRATIONS ---
+builder.Services.AddDataServices(builder.Configuration); // Data & DB
+builder.Services.AddBusinessServices(); // Business & Auth
 
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseMySql(connectionString, new MySqlServerVersion(new Version(8, 0, 31)), // Versiyonu elle yaz
-        b => b.MigrationsAssembly("LcvFlow.Data")));
+// --- 3. AUTHENTICATION & UI ---
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options =>
+    {
+        options.LoginPath = "/admin/login";
+        options.Cookie.Name = "LcvFlow.Auth";
+        options.ExpireTimeSpan = TimeSpan.FromDays(7);
+    });
 
-builder.Services.AddDataServices(builder.Configuration);
-// builder.Services.AddApplicationServices(); // Daha sonra eklenecek
-
-// 3. BLAZOR VE UI SERVISLERI
+builder.Services.AddAuthorization();
+builder.Services.AddControllers(); // API Controllerlar için şart!
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
 var app = builder.Build();
 
-// 4. HTTP PIPELINE & MIDDLEWARE
-// GlobalExceptionMiddleware'i buraya, pipeline'ın en başına ekleyeceğiz.
-// app.UseMiddleware<GlobalExceptionMiddleware>(); 
+// --- 4. MIDDLEWARE PIPELINE ---
+
+// Global Exception Middleware her zaman en üstte olmalı
+app.UseMiddleware<ExceptionMiddleware>();
 
 if (!app.Environment.IsDevelopment())
 {
@@ -47,7 +49,13 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
+
+app.UseRouting(); // Auth'dan önce routing
+app.UseAuthentication();
+app.UseAuthorization();
 app.UseAntiforgery();
+
+app.MapControllers();
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
