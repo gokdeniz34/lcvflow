@@ -21,5 +21,5 @@ public class Guest : BaseEntity
     public string? TableNumber { get; set; } // Admin tarafından atanacak masa numarası
 
     public int EventId { get; set; }
-    public Event Event { get; set; } = null!;
+    public virtual Event Event { get; set; } = null!;
 }

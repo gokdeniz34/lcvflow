@@ -9,5 +9,5 @@ public class Event : BaseEntity
     public string Location { get; set; } = null!;
     public string Slug { get; set; } = null!;
     public bool IsActive { get; set; } = true;
-    public ICollection<Guest> Guests { get; set; } = [];
+    public virtual ICollection<Guest> Guests { get; set; } = [];
 }

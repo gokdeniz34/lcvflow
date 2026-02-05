@@ -26,11 +26,13 @@ namespace MyApp.Namespace
         public async Task<IActionResult> Login([FromForm] string username, [FromForm] string password)
         {
             var result = await _authService.ValidateUserAsync(username, password);
-            if (!result.IsSuccess)
-                return LocalRedirect($"/admin/login?error=error");
+            if (!result.IsSuccess || result.Data == null)
+            {
+                return Redirect($"/admin/login?error={result.Message}");
+            }
 
             var claims = new List<Claim>
-            {   
+            {
                 new(ClaimTypes.Name, result.Data.Username),
                 new(ClaimTypes.NameIdentifier, result.Data.Id.ToString())
             };

@@ -43,7 +43,8 @@
     {
         // Controller hata verip geri gönderdiğinde QueryString'den hatayı yakalarız
         var uri = Nav.ToAbsoluteUri(Nav.Uri);
-        if (Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(uri.Query).TryGetValue("error", out var message))
+        if (Microsoft.AspNetCore.WebUtilities.QueryHelpers
+        .ParseQuery(uri.Query).TryGetValue("error", out var message))
         {
             ErrorMessage = message;
         }
