@@ -4,7 +4,6 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace LcvFlow.Data.Configurations;
 
-// LcvFlow.Data/Configurations/GuestConfiguration.cs
 
 public class GuestConfiguration : IEntityTypeConfiguration<Guest>
 {

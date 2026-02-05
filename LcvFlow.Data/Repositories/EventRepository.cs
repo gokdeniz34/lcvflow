@@ -1,9 +1,8 @@
 ﻿using LcvFlow.Data.Context;
-using LcvFlow.Data.Repositories;
-using LcvFlow.Domain;
 using LcvFlow.Domain.Entities;
+using LcvFlow.Domain.Interfaces;
 
-namespace LcvFlow.Data;
+namespace LcvFlow.Data.Repositories;
 
 public class EventRepository : EfRepository<Event>, IEventRepository
 {

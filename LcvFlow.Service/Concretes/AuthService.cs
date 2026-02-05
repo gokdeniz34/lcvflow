@@ -1,5 +1,4 @@
-﻿using System.Security.Claims;
-using AutoMapper;
+﻿using AutoMapper;
 using LcvFlow.Domain.Interfaces;
 using LcvFlow.Service.Dtos.Auth;
 using LcvFlow.Service.Helpers.Auth;
@@ -21,7 +20,7 @@ public class AuthService : IAuthService
     {
         var user = await _adminUserRepository.GetByUsernameAsync(username);
 
-        if (user == null || !PasswordHelper.Verify(user.PasswordHash,password))
+        if (user == null || !PasswordHelper.Verify(user.PasswordHash, password))
         {
             return new AuthResultDto { IsSuccess = false, Message = "Hatali Giris!" };
         }

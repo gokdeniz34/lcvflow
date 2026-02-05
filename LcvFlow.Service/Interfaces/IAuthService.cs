@@ -1,6 +1,4 @@
-﻿using System.Security.Claims;
-using LcvFlow.Domain;
-using LcvFlow.Service.Dtos.Auth;
+﻿using LcvFlow.Service.Dtos.Auth;
 
 namespace LcvFlow.Service.Interfaces;
 

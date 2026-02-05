@@ -2,10 +2,12 @@
 
   <ItemGroup>
     <ProjectReference Include="..\LcvFlow.Domain\LcvFlow.Domain.csproj" />
+    <ProjectReference Include="..\LcvFlow.Data\LcvFlow.Data.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="12.0.1" />
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.2" />
   </ItemGroup>
 
