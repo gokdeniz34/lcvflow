@@ -1,6 +1,20 @@
-﻿<Router AppAssembly="typeof(Program).Assembly">
+﻿@using Microsoft.AspNetCore.Components.Web
+@using LcvFlow.Web.Components.Layout
+@* RenderMode'u burada direktif olarak tanımlıyoruz *@
+@rendermode InteractiveServer
+
+<Router AppAssembly="@typeof(Program).Assembly">
     <Found Context="routeData">
-        <RouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)" />
-        <FocusOnNavigate RouteData="routeData" Selector="h1" />
+        <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
+        <FocusOnNavigate RouteData="@routeData" Selector="h1" />
     </Found>
+    <NotFound>
+        <PageTitle>404 - Bulunamadı</PageTitle>
+        <LayoutView Layout="@typeof(MainLayout)">
+            <div class="container text-center mt-5">
+                <p role="alert">Üzgünüm, aradığınız sayfa bulunamadı.</p>
+                <a href="/" class="btn btn-primary">Ana Sayfaya Dön</a>
+            </div>
+        </LayoutView>
+    </NotFound>
 </Router>

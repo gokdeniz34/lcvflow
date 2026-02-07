@@ -1,0 +1,135 @@
+@page "/admin"
+@using LcvFlow.Web.Components.Shared
+@using LcvFlow.Service.Interfaces
+@using LcvFlow.Service.Dtos.Admin
+@layout LcvFlow.Web.Components.Shared.AdminLayout
+@inject IAdminService AdminService
+@inject NavigationManager NavManager
+
+<PageTitle>Dashboard | LcvFlow Admin</PageTitle>
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="h3 mb-0 text-gray-800">Genel İstatistikler</h2>
+            <p class="text-muted mb-0">Tüm etkinliklerin toplam verilerini görüntülüyorsunuz.</p>
+        </div>
+        <button class="btn btn-primary shadow-sm" @onclick='() => NavManager.NavigateTo("/admin/event-create")'>
+            <i class="oi oi-plus"></i> Yeni Etkinlik Oluştur
+        </button>
+    </div>
+
+    @if (_summary == null && !_noDataFound)
+    {
+        <div class="d-flex justify-content-center my-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Veriler çekiliyor...</span>
+            </div>
+        </div>
+    }
+    else if (_noDataFound)
+    {
+        <div class="alert alert-warning shadow-sm border-0" role="alert">
+            <h4 class="alert-heading">Henüz Veri Yok!</h4>
+            <p>Sistemde kayıtlı etkinlik veya misafir bulunmadığı için istatistikler hesaplanamadı.</p>
+            <hr>
+            <button class="btn btn-outline-warning btn-sm" @onclick='() => NavManager.NavigateTo("/admin/event-create")'>
+                İlk Etkinliğini Oluştur
+            </button>
+        </div>
+    }
+    else if (_summary != null)
+    {
+        <div class="row">
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card border-0 shadow-sm h-100 py-2 border-start border-primary border-4">
+                    <div class="card-body">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Toplam Davetli</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">@_summary.TotalGuests</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card border-0 shadow-sm h-100 py-2 border-start border-success border-4">
+                    <div class="card-body">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Katılan Yetişkin</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">@_summary.TotalAdults</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card border-0 shadow-sm h-100 py-2 border-start border-info border-4">
+                    <div class="card-body">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Toplam Çocuk</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">@_summary.TotalChildren</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card border-0 shadow-sm h-100 py-2 border-start border-warning border-4">
+                    <div class="card-body">
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Cevap Bekleyen</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">@_summary.PendingCount</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-3">
+            <div class="col-md-6">
+                <div class="card shadow-sm border-0 p-4">
+                    <h5 class="card-title text-muted mb-4">Katılım Durum Grafiği (Özet)</h5>
+                    <div class="progress mb-3" style="height: 25px;">
+                        <div class="progress-bar bg-success" role="progressbar"
+                             style="width: @(CalculatePercentage(_summary.AttendingCount, _summary.TotalGuests))%"
+                             aria-valuenow="@_summary.AttendingCount" aria-valuemin="0"
+                             aria-valuemax="@_summary.TotalGuests">
+                            Gelen (%@CalculatePercentage(_summary.AttendingCount, _summary.TotalGuests))
+                        </div>
+                        <div class="progress-bar bg-danger" role="progressbar"
+                             style="width: @(CalculatePercentage(_summary.DeclinedCount, _summary.TotalGuests))%"
+                             aria-valuenow="@_summary.DeclinedCount" aria-valuemin="0" aria-valuemax="@_summary.TotalGuests">
+                            Gelmeyen
+                        </div>
+                    </div>
+                    <small class="text-muted">Yüzdeler toplam davetli sayısı üzerinden hesaplanmıştır.</small>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private AdminDashboardDto? _summary;
+    private bool _noDataFound = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDashboardData();
+    }
+
+    private async Task LoadDashboardData()
+    {
+        // eventId null gönderildiği için servis tüm sistemin özetini dönecek.
+        var result = await AdminService.GetDashboardSummaryAsync(null);
+
+        if (result.IsSuccess)
+        {
+            _summary = result.Data;
+            _noDataFound = _summary.TotalGuests == 0;
+        }
+        else
+        {
+            _noDataFound = true;
+        }
+    }
+
+    private int CalculatePercentage(int count, int total)
+    {
+        if (total == 0) return 0;
+        return (int)Math.Round((double)count / total * 100);
+    }
+}

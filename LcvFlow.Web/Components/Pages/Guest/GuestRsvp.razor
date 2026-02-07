@@ -1,0 +1,167 @@
+@page "/rsvp/{EventSlug}/{Token}"
+@rendermode InteractiveServer
+
+@using LcvFlow.Service.Dtos.Guest
+@using LcvFlow.Service.Interfaces
+@using LcvFlow.Domain.Common
+
+@inject IGuestService GuestService
+@inject NavigationManager NavManager
+
+<PageTitle>@(_guestInfo?.EventName ?? "Davetiye") | LcvFlow</PageTitle>
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card border-0 shadow-lg mb-5">
+                
+                @* Başlık Bölümü *@
+                <div class="card-header bg-dark text-white p-4 text-center">
+                    @if (_guestInfo != null)
+                    {
+                        <h3 class="mb-1">Hoş Geldin, @_guestInfo.FullName!</h3>
+                        <p class="mb-0 text-white-50">@_guestInfo.EventName etkinliği için katılım durumunu bildir.</p>
+                    }
+                    else if (!_isInitialLoading)
+                    {
+                        <h3 class="mb-0 text-danger">Davetiye Bulunamadı</h3>
+                    }
+                </div>
+
+                <div class="card-body p-4">
+                    
+                    @* Sonuç Bildirimi *@
+                    @if (_showResult)
+                    {
+                        <div class="alert @(_resultSuccess ? "alert-success" : "alert-danger") shadow-sm" role="alert">
+                            <h5 class="alert-heading">@(_resultSuccess ? "İşlem Başarılı" : "Hata Oluştu")</h5>
+                            <p class="mb-0">@_message</p>
+                        </div>
+                    }
+
+                    @if (_isInitialLoading)
+                    {
+                        <div class="text-center my-5">
+                            <div class="spinner-border text-primary" role="status"></div>
+                            <p class="mt-2 text-muted">Davetiyeniz yükleniyor...</p>
+                        </div>
+                    }
+                    else if (_guestInfo != null)
+                    {
+                        <EditForm Model="_rsvpDto" OnValidSubmit="HandleSubmit" FormName="GuestRsvpForm">
+                            <AntiforgeryToken />
+                            
+                            @* Katılım Durumu *@
+                            <div class="mb-4">
+                                <label class="form-label fw-bold d-block mb-3 text-center">Katılıyor musunuz?</label>
+                                <div class="btn-group w-100" role="group">
+                                    <input type="radio" class="btn-check" name="attending" id="attending-yes" autocomplete="off" 
+                                           checked="@(_rsvpDto.IsAttending == true)" @onclick="() => SetAttending(true)">
+                                    <label class="btn btn-outline-success py-3" for="attending-yes">Evet, Geliyorum</label>
+
+                                    <input type="radio" class="btn-check" name="attending" id="attending-no" autocomplete="off" 
+                                           checked="@(_rsvpDto.IsAttending == false)" @onclick="() => SetAttending(false)">
+                                    <label class="btn btn-outline-danger py-3" for="attending-no">Hayır, Gelemiyorum</label>
+                                </div>
+                            </div>
+
+                            @if (_rsvpDto.IsAttending == true)
+                            {
+                                <div class="row g-3 mb-4">
+                                    <div class="col-6">
+                                        <label class="form-label small fw-bold">Yetişkin Sayısı</label>
+                                        <input type="number" class="form-control" @bind="_rsvpDto.AdultCount" min="1" />
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="form-label small fw-bold">Çocuk Sayısı</label>
+                                        <input type="number" class="form-control" @bind="_rsvpDto.ChildCount" min="0" />
+                                    </div>
+                                </div>
+                            }
+
+                            <div class="mb-4">
+                                <label class="form-label small fw-bold">Notunuz</label>
+                                <textarea class="form-control" @bind="_rsvpDto.Note" rows="3" placeholder="Eklemek istediğiniz bir not var mı?"></textarea>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary w-100 py-3 fw-bold" disabled="@_isLoading">
+                                @if (_isLoading)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2"></span>
+                                    <span>Gönderiliyor...</span>
+                                }
+                                else
+                                {
+                                    <span>Yanıtı Gönder</span>
+                                }
+                            </button>
+                        </EditForm>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string EventSlug { get; set; } = string.Empty;
+    [Parameter] public string Token { get; set; } = string.Empty;
+    
+    private GuestRsvpDto _rsvpDto = new();
+    private GuestDto? _guestInfo; 
+    private bool _showResult = false;
+    private bool _resultSuccess = false;
+    private string _message = "";
+    private bool _isLoading = false;
+    private bool _isInitialLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _isInitialLoading = true;
+        
+        // Servisindeki gerçek metot: GetByTokenAsync (GuestDto döner)
+        var result = await GuestService.GetByTokenAsync(Token);
+
+        if (result.IsSuccess && result.Data != null)
+        {
+            _guestInfo = result.Data;
+            _rsvpDto.AccessToken = Token;
+            
+            // Mevcut durumu doldur
+            _rsvpDto.IsAttending = true; 
+            _rsvpDto.AdultCount = 1;
+        }
+        else
+        {
+            _message = "Bu davetiye geçerli değil veya silinmiş.";
+            _showResult = true;
+            _resultSuccess = false;
+        }
+
+        _isInitialLoading = false;
+    }
+
+    private void SetAttending(bool value)
+    {
+        _rsvpDto.IsAttending = value;
+        if (!value) { _rsvpDto.AdultCount = 0; _rsvpDto.ChildCount = 0; }
+        else { _rsvpDto.AdultCount = 1; }
+    }
+
+    private async Task HandleSubmit()
+    {
+        _isLoading = true;
+        _showResult = false;
+
+        var result = await GuestService.SubmitRsvpAsync(_rsvpDto);
+
+        _resultSuccess = result.IsSuccess;
+        _message = result.IsSuccess 
+            ? "Katılım durumunuz başarıyla güncellendi." 
+            : result.Message ?? "Hata oluştu.";
+        
+        _showResult = true;
+        _isLoading = false;
+        StateHasChanged();
+    }
+}

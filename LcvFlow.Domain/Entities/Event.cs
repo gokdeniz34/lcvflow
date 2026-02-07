@@ -10,4 +10,15 @@ public class Event : BaseEntity
     public string Slug { get; set; } = null!;
     public bool IsActive { get; set; } = true;
     public virtual ICollection<Guest> Guests { get; set; } = [];
+
+    private Event() { }
+
+    public Event(string name, DateTime eventDate, string location, string slug)
+    {
+        Name = name;
+        EventDate = eventDate;
+        Location = location;
+        Slug = slug;
+        IsActive = true;
+    }
 }

@@ -21,6 +21,7 @@ builder.Services.AddDataServices(builder.Configuration); // Data & DB
 builder.Services.AddBusinessServices(); // Business & Auth
 
 // --- 3. AUTHENTICATION & UI ---
+builder.Services.AddAntiforgery();
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {

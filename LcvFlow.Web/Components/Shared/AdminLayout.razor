@@ -1,0 +1,17 @@
+@inherits LayoutComponentBase
+@namespace LcvFlow.Web.Components.Shared
+
+<div class="admin-layout" style="display:flex; min-height:100vh;">
+    <aside class="sidebar bg-dark text-white p-3" style="width:280px;">
+        <h4 class="mb-4">LcvFlow Admin</h4>
+        <nav class="nav flex-column">
+            <NavLink class="nav-link text-white" href="/admin" Match="NavLinkMatch.All">📊 Dashboard</NavLink>
+            <NavLink class="nav-link text-white" href="/admin/event-create">📅 Etkinlikler</NavLink>
+            <NavLink class="nav-link text-white" href="/admin/guest-create">👥 Davetliler</NavLink>
+        </nav>
+    </aside>
+
+    <main class="content flex-grow-1 p-4 bg-light">
+        @Body
+    </main>
+</div>

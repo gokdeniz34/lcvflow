@@ -9,28 +9,30 @@ namespace LcvFlow.Data.Repositories;
 public abstract class EfRepository<T> : IRepository<T> where T : BaseEntity
 {
     protected readonly AppDbContext _context;
-    protected EfRepository(AppDbContext context) => _context = context;
+    private readonly DbSet<T> _dbSet;
 
-    public IQueryable<T> Query() => _context.Set<T>();
+    protected EfRepository(AppDbContext context)
+    {
+        _context = context;
+        _dbSet = _context.Set<T>();
+    }
 
-    public async Task<T?> GetAsync(Expression<Func<T, bool>> predicate)
-        => await Query().FirstOrDefaultAsync(predicate);
+    public IQueryable<T> Query() => _dbSet.AsQueryable();
+    public async Task<T?> GetByIdAsync(int id, CancellationToken ct = default)
+        => await _dbSet.FindAsync(new object[] { id }, ct);
 
-    public async Task<T?> GetByIdAsync(int id)
-        => await Query().FirstOrDefaultAsync(x => x.Id == id);
+    public async Task AddAsync(T entity, CancellationToken ct = default)
+        => await _dbSet.AddAsync(entity, ct);
 
-    public async Task<List<T>> GetAllAsync(Expression<Func<T, bool>>? predicate = null)
-        => predicate != null ? await Query().Where(predicate).ToListAsync() : await Query().ToListAsync();
+    public async Task AddRangeAsync(IEnumerable<T> entities, CancellationToken ct = default)
+        => await _dbSet.AddRangeAsync(entities, ct);
 
-    public async Task AddAsync(T entity) => await _context.Set<T>().AddAsync(entity);
+    public void Update(T entity) => _dbSet.Update(entity);
 
-    public async Task AddRangeAsync(IEnumerable<T> entities) => await _context.Set<T>().AddRangeAsync(entities);
+    public void Delete(T entity) => _dbSet.Remove(entity);
 
-    public void Update(T entity) => _context.Set<T>().Update(entity);
+    public void Remove(T entity) => _dbSet.Remove(entity);
 
-    public void UpdateRange(IEnumerable<T> entities) => _context.Set<T>().UpdateRange(entities);
-
-    public void Delete(T entity) => _context.Set<T>().Remove(entity);
-
-    public void DeleteRange(IEnumerable<T> entities) => _context.Set<T>().RemoveRange(entities);
+    public async Task<int> SaveChangesAsync(CancellationToken ct = default)
+        => await _context.SaveChangesAsync(ct);
 }
