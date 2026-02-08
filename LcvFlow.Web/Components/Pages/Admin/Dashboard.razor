@@ -1,64 +1,290 @@
 @page "/admin/dashboard"
-@layout AdminLayout
-@attribute [Authorize]
+@using LcvFlow.Domain.Entities
+@using LcvFlow.Domain.Interfaces
+@using LcvFlow.Service.Interfaces
+@using Microsoft.EntityFrameworkCore
+@inject IAdminService AdminService
+@inject IEventRepository EventRepository
+@inject IGuestRepository GuestRepository
+@inject NavigationManager NavManager
+@inject IJSRuntime JS
 
-<div class="container-fluid">
-    <div class="row mb-4">
+<div class="container-fluid py-4">
+    @* HEADER *@
+    <div class="row mb-4 align-items-center">
         <div class="col">
-            <h2 class="fw-bold">Genel Durum</h2>
+            <h2 class="fw-bold text-dark mb-0">Genel Durum</h2>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item active text-warning fw-bold">Dashboard</li>
+                </ol>
+            </nav>
         </div>
-        <div class="col-auto">
-            <select class="form-select shadow-sm">
-                <option>Tüm Etkinlikler</option>
-                <option>Ayşe & Ali Düğünü</option>
+        <div class="col-auto d-flex gap-2">
+            @if (_selectedEventId != 0 && _allowTestData)
+            {
+                <button class="btn btn-warning shadow-sm fw-bold px-4" @onclick="GenerateTestData">
+                    ⚡ Bu Etkinlik İçin Veri Üret
+                </button>
+            }
+            <select class="form-select shadow-sm border-2 border-warning" @onchange="OnEventChanged" style="width: 250px;">
+                <option value="0">Tüm Etkinlikler (Genel Bakış)</option>
+                @foreach (var ev in _events)
+                {
+                    <option value="@ev.Id" selected="@(_selectedEventId == ev.Id)">@ev.Name</option>
+                }
             </select>
         </div>
     </div>
 
-    <div class="row g-4">
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm p-3">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <p class="text-muted small mb-1">Toplam Davetli</p>
-                        <h3 class="fw-bold">250</h3>
+    @* KPI KARTLARI *@
+    <div class="row g-4 mb-4">
+        @foreach (var stat in GetStatCards())
+        {
+            <div class="col-md-3">
+                <div class="card border-0 shadow-sm h-100 overflow-hidden">
+                    <div class="card-body p-4 position-relative">
+                        <p class="text-muted small fw-bold text-uppercase mb-2">@stat.Label</p>
+                        <h2 class="fw-bold mb-0">@stat.Value</h2>
+                        <div class="position-absolute end-0 bottom-0 p-3 opacity-25 display-4">@stat.Icon</div>
                     </div>
-                    <div class="text-primary fs-3">👥</div>
+                    <div class="progress rounded-0" style="height: 4px;">
+                        <div class="progress-bar @stat.BgClass" style="width: 100%"></div>
+                    </div>
                 </div>
             </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm p-3 border-start border-success border-4">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <p class="text-muted small mb-1">Gelenler</p>
-                        <h3 class="fw-bold text-success">142</h3>
-                    </div>
-                    <div class="text-success fs-3">✅</div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm p-3 border-start border-danger border-4">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <p class="text-muted small mb-1">Gelmeyenler</p>
-                        <h3 class="fw-bold text-danger">18</h3>
-                    </div>
-                    <div class="text-danger fs-3">❌</div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm p-3 border-start border-warning border-4">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <p class="text-muted small mb-1">Cevap Bekleyen</p>
-                        <h3 class="fw-bold text-warning">90</h3>
-                    </div>
-                    <div class="text-warning fs-3">⏳</div>
-                </div>
-            </div>
-        </div>
+        }
     </div>
+
+    @if (_selectedEventId == 0)
+    {
+        <div class="row g-4">
+            @* PASTA GRAFİĞİ *@
+            <div class="col-lg-4">
+                <div class="card border-0 shadow-sm h-100 p-4 text-center">
+                    <h6 class="fw-bold mb-4 text-start"><i class="oi oi-pie-chart me-2"></i>Katılım Oranı</h6>
+                    <div style="height: 280px; position: relative;">
+                        <canvas id="doughnutChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            @* SİSTEM ÖZETİ (GÜNCELLENDİ) *@
+            <div class="col-lg-8">
+                <div class="card border-0 shadow-sm h-100 p-4">
+                    <h6 class="fw-bold mb-3"><i class="oi oi-list me-2"></i>Sistem Özeti</h6>
+                    <div class="list-group list-group-flush mt-2">
+                        <div class="list-group-item d-flex justify-content-between align-items-center bg-transparent px-0">
+                            <span>Toplam Etkinlik Sayısı</span>
+                            <span class="badge bg-secondary rounded-pill">@_events.Count</span>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center bg-transparent px-0">
+                            <span>Aktif Etkinlik Sayısı</span>
+                            <span class="badge bg-success rounded-pill">@_events.Count(e => e.EventDate >= DateTime.Now)</span>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center bg-transparent px-0">
+                            <span>Toplam Kayıtlı Davetli</span>
+                            <span class="badge bg-primary rounded-pill">@_totalGuestCount</span>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center bg-transparent px-0">
+                            <span>Son 24 Saatlik Kayıt</span>
+                            <span class="badge bg-info rounded-pill">@_last24HoursCount</span>
+                        </div>
+                    </div>
+                    <div class="mt-auto pt-3">
+                        @* BUTON AKSIYONU DÜZELTİLDİ *@
+                        <button class="btn btn-outline-warning btn-sm w-100 fw-bold" @onclick='() => NavManager.NavigateTo("/admin/events")'>
+                            Tüm Etkinlikleri Yönet
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            @* BAR CHART *@
+            <div class="col-12">
+                <div class="card border-0 shadow-sm p-4">
+                    <h6 class="fw-bold mb-4"><i class="oi oi-bar-chart me-2"></i>En Yoğun 10 Etkinlik</h6>
+                    <div style="height: 350px; position: relative;">
+                        <canvas id="barChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        @* ETKİNLİK DETAY TABLOSU *@
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 fw-bold text-primary">Son Kayıtlar</h5>
+                <button class="btn btn-sm btn-outline-warning fw-bold" @onclick='() => NavManager.NavigateTo($"/admin/events/{_selectedEventId}/guests")'>
+                    Tümünü Yönet
+                </button>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="ps-4">Ad Soyad</th>
+                                <th>Telefon</th>
+                                <th>Durum</th>
+                                <th class="text-end pe-4">Aksiyon</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (_recentGuests.Any())
+                            {
+                                @foreach (var guest in _recentGuests)
+                                {
+                                    <tr>
+                                        <td class="ps-4 fw-medium">@guest.FirstName @guest.LastName</td>
+                                        <td>@guest.PhoneNumber</td>
+                                        <td>
+                                            <span class="badge @GetBadgeClass(guest.IsAttending)">
+                                                @GetStatusText(guest.IsAttending)
+                                            </span>
+                                        </td>
+                                        <td class="text-end pe-4">
+                                            <button class="btn btn-sm btn-light border" @onclick='() => NavManager.NavigateTo($"/admin/guestedit/{guest.Id}")'>Detay</button>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr><td colspan="4" class="text-center py-4 text-muted">Henüz kayıt bulunamadı.</td></tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
 </div>
+
+@code {
+    private List<Event> _events = new();
+    private List<Guest> _recentGuests = new();
+    private DashboardStats _stats = new();
+    private int _selectedEventId = 0;
+    private bool _allowTestData = true;
+    private int _totalGuestCount = 0;
+    private int _last24HoursCount = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try {
+            _events = await EventRepository.Query().ToListAsync();
+            await LoadStats();
+        } catch (Exception ex) {
+            Console.WriteLine($"Hata: {ex.Message}");
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // Grafiklerin çizilmesi için JS'i tetikle (Sadece Seçim '0' ise)
+        if (_selectedEventId == 0 && _events.Any())
+        {
+            await Task.Delay(300); // DOM ve CSS'in oturması için biraz daha süre tanıyalım
+            await RenderCharts();
+        }
+    }
+
+    private async Task RenderCharts()
+    {
+        try {
+            var allGuests = await GuestRepository.Query().ToListAsync();
+            
+            var doughnutData = new int[] { 
+                allGuests.Count(g => g.IsAttending == true), 
+                allGuests.Count(g => g.IsAttending == false), 
+                allGuests.Count(g => g.IsAttending == null) 
+            };
+
+            var topEvents = _events
+                .Select(e => new { e.Name, Count = allGuests.Count(g => g.EventId == e.Id) })
+                .OrderByDescending(x => x.Count)
+                .Take(10).ToList();
+
+            var barData = new {
+                labels = topEvents.Select(x => x.Name).ToArray(),
+                counts = topEvents.Select(x => x.Count).ToArray()
+            };
+
+            await JS.InvokeVoidAsync("setupCharts", doughnutData, barData);
+        } catch { /* JS henüz hazır değilse hata bastırmasın */ }
+    }
+
+    private async Task LoadStats()
+    {
+        IQueryable<Guest> query = GuestRepository.Query();
+        
+        // Genel veriler için tüm misafirleri say
+        var allGuests = await query.ToListAsync();
+        _totalGuestCount = allGuests.Count;
+        _last24HoursCount = allGuests.Count(g => g.CreatedAt >= DateTime.Now.AddDays(-1));
+
+        // Filtrelenmiş veriler
+        if (_selectedEventId != 0)
+        {
+            var filtered = allGuests.Where(g => g.EventId == _selectedEventId).ToList();
+            _recentGuests = filtered.OrderByDescending(g => g.CreatedAt).Take(10).ToList();
+            _stats = new DashboardStats {
+                Total = filtered.Count,
+                Attending = filtered.Count(g => g.IsAttending == true),
+                Declined = filtered.Count(g => g.IsAttending == false),
+                Pending = filtered.Count(g => g.IsAttending == null)
+            };
+        }
+        else
+        {
+            _stats = new DashboardStats {
+                Total = _totalGuestCount,
+                Attending = allGuests.Count(g => g.IsAttending == true),
+                Declined = allGuests.Count(g => g.IsAttending == false),
+                Pending = allGuests.Count(g => g.IsAttending == null)
+            };
+        }
+        StateHasChanged();
+    }
+
+    private async Task OnEventChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var id)) {
+            _selectedEventId = id;
+            await LoadStats();
+        }
+    }
+
+    private List<StatCard> GetStatCards() => new() {
+        new("Toplam Davetli", _stats.Total.ToString(), "👥", "bg-primary"),
+        new("Gelenler", _stats.Attending.ToString(), "✅", "bg-success"),
+        new("Gelmeyenler", _stats.Declined.ToString(), "❌", "bg-danger"),
+        new("Bekleyenler", _stats.Pending.ToString(), "⏳", "bg-warning")
+    };
+
+    private string GetBadgeClass(bool? attending) => attending switch {
+        true => "bg-success-subtle text-success",
+        false => "bg-danger-subtle text-danger",
+        _ => "bg-warning-subtle text-warning"
+    };
+
+    private string GetStatusText(bool? attending) => attending switch {
+        true => "Geliyor",
+        false => "Gelmiyor",
+        _ => "Bekleniyor"
+    };
+
+    private async Task GenerateTestData()
+    {
+        if (_selectedEventId > 0) {
+            await AdminService.SeedDummyDataAsync(_selectedEventId);
+            await LoadStats();
+        }
+    }
+
+    public record StatCard(string Label, string Value, string Icon, string BgClass);
+    public class DashboardStats { public int Total, Attending, Declined, Pending; }
+}

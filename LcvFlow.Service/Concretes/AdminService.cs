@@ -131,4 +131,42 @@ public class AdminService : IAdminService
     {
         throw new NotImplementedException();
     }
+
+    public async Task SeedDummyDataAsync(int eventId)
+    {
+        var random = new Random();
+        var names = new[] { "Ahmet", "Ayşe", "Mehmet", "Fatma", "Can", "Zeynep", "Burak", "Ece" };
+        var lastNames = new[] { "Yılmaz", "Kaya", "Demir", "Çelik", "Şahin", "Öztürk" };
+
+        var dummyGuests = new List<Guest>();
+
+        for (int i = 0; i < 50; i++) // 50 örnek kişi
+        {
+            var guest = new Guest(
+                eventId,
+                names[random.Next(names.Length)],
+                lastNames[random.Next(lastNames.Length)],
+                "555" + random.Next(1000000, 9999999)
+            );
+
+            // Rastgele LCV durumu (Gelen, Gelmeyen, Bekleyen)
+            var status = random.Next(0, 3);
+            if (status == 1)
+                guest.UpdateRsvpStatus(true);
+            else if (status == 2)
+                guest.UpdateRsvpStatus(false);
+
+            // Dinamik veri simülasyonu
+            var additional = new Dictionary<string, string> {
+            { "Masa No", random.Next(1, 20).ToString() },
+            { "Not", "Sistem tarafından otomatik üretildi." }
+        };
+            guest.SetImportedAdditionalData(additional);
+
+            dummyGuests.Add(guest);
+        }
+
+        await _guestRepository.AddRangeAsync(dummyGuests);
+        await _guestRepository.SaveChangesAsync();
+    }
 }

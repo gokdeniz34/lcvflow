@@ -12,103 +12,109 @@
 @inject NavigationManager NavManager
 
 <div class="container mt-4 mb-5">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h3 class="fw-bold text-dark">
-                <i class="oi oi-people me-2"></i>@(_event?.Name) - Davetli Listesi
+    @* ÜST BAŞLIK VE NAVİGASYON *@
+    <div class="row align-items-center mb-4">
+        <div class="col-md-7">
+            <button class="btn btn-sm btn-link text-decoration-none text-muted p-0 mb-1" @onclick='() => NavManager.NavigateTo("/admin/dashboard")'>
+                <i class="oi oi-chevron-left small"></i> Dashboard'a Dön
+            </button>
+            <h3 class="fw-bold text-dark mb-0">
+                <i class="oi oi-people me-2 text-warning"></i>@(_event?.Name)
             </h3>
-            <p class="text-muted">Toplam @(_guests?.Count ?? 0) davetli tanımlı.</p>
+            <span class="badge bg-light text-dark border mt-2">Toplam @(_guests?.Count ?? 0) Davetli</span>
         </div>
-        <div class="btn-group shadow-sm">
-            <button class="btn btn-outline-secondary" @onclick='() => NavManager.NavigateTo($"/admin/events/edit/{EventId}")'>
-                <i class="oi oi-pencil me-1"></i> Etkinliği Düzenle
-            </button>
-            <button class="btn btn-primary" @onclick="RefreshList">
-                <i class="oi oi-reload me-1"></i> Yenile
-            </button>
+        <div class="col-md-5 text-md-end mt-3 mt-md-0">
+            <div class="btn-group shadow-sm">
+                <button class="btn btn-white border" @onclick="RefreshList" title="Listeyi Yenile">
+                    <i class="oi oi-reload"></i>
+                </button>
+                <button class="btn btn-dark fw-bold" @onclick='() => NavManager.NavigateTo($"/admin/events/edit/{EventId}")'>
+                    <i class="oi oi-cog me-1"></i> Etkinlik Ayarları
+                </button>
+            </div>
         </div>
     </div>
 
-    @* Arama ve Filtreleme Barı *@
-    <div class="card shadow-sm border-0 mb-4">
-        <div class="card-body bg-light">
+    @* ARAMA VE FİLTRELEME *@
+    <div class="card shadow-sm border-0 mb-4 bg-white">
+        <div class="card-body">
             <div class="row g-3">
-                <div class="col-md-6">
+                <div class="col-md-8">
                     <div class="input-group">
-                        <span class="input-group-text bg-white border-end-0"><i class="oi oi-magnifying-glass"></i></span>
-                        <input type="text" class="form-control border-start-0" placeholder="İsim veya telefon ile ara..." 
+                        <span class="input-group-text bg-white border-end-0"><i class="oi oi-magnifying-glass text-muted"></i></span>
+                        <input type="text" class="form-control border-start-0 ps-0" placeholder="İsim veya telefon ile ara..." 
                                @bind="_searchTerm" @bind:event="oninput" />
                     </div>
                 </div>
-                <div class="col-md-3">
-                    <select class="form-select" @bind="_statusFilter">
+                <div class="col-md-4">
+                    <select class="form-select fw-medium" @bind="_statusFilter">
                         <option value="">Tüm Durumlar</option>
-                        <option value="Pending">Bekleniyor</option>
-                        <option value="Attending">Geliyor</option>
-                        <option value="Declined">Gelemiyor</option>
+                        <option value="Pending">⏳ Bekleniyor</option>
+                        <option value="Attending">✅ Geliyor</option>
+                        <option value="Declined">❌ Gelemiyor</option>
                     </select>
                 </div>
             </div>
         </div>
     </div>
 
-    @* Davetli Tablosu *@
-    <div class="card shadow-sm border-0">
+    @* TABLO *@
+    <div class="card shadow-sm border-0 overflow-hidden">
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
                 <thead class="bg-dark text-white">
                     <tr>
-                        <th>Ad Soyad</th>
+                        <th class="ps-4">Ad Soyad</th>
                         <th>Telefon</th>
                         <th>Durum</th>
-                        @* Dinamik Kolon Başlıkları *@
                         @foreach (var field in _dynamicFieldLabels)
                         {
                             <th>@field</th>
                         }
-                        <th class="text-end">İşlemler</th>
+                        <th class="text-end pe-4">İşlemler</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @if (_filteredGuests == null)
+                    @if (_guests == null)
                     {
-                        <tr><td colspan="10" class="text-center py-5"><div class="spinner-border"></div></td></tr>
+                        <tr><td colspan="10" class="text-center py-5"><div class="spinner-border text-warning"></div></td></tr>
                     }
                     else if (!_filteredGuests.Any())
                     {
-                        <tr><td colspan="10" class="text-center py-5 text-muted">Davetli bulunamadı.</td></tr>
+                        <tr><td colspan="10" class="text-center py-5 text-muted">Aranan kriterde davetli bulunamadı.</td></tr>
                     }
                     else
                     {
                         @foreach (var guest in _filteredGuests)
                         {
                             <tr>
-                                <td class="fw-bold">@guest.FirstName @guest.LastName</td>
+                                <td class="ps-4 fw-bold text-primary">@guest.FirstName @guest.LastName</td>
                                 <td>@guest.PhoneNumber</td>
                                 <td>
                                     @if (guest.IsAttending == true)
                                     {
-                                        <span class="badge bg-success"><i class="oi oi-check me-1"></i> Geliyor</span>
+                                        <span class="badge rounded-pill bg-success-subtle text-success border border-success px-3">Geliyor</span>
                                     }
                                     else if (guest.IsAttending == false)
                                     {
-                                        <span class="badge bg-danger"><i class="oi oi-x me-1"></i> Gelemiyor</span>
+                                        <span class="badge rounded-pill bg-danger-subtle text-danger border border-danger px-3">Gelemiyor</span>
                                     }
                                     else
                                     {
-                                        <span class="badge bg-secondary">Bekleniyor</span>
+                                        <span class="badge rounded-pill bg-light text-muted border px-3">Bekleniyor</span>
                                     }
                                 </td>
-                                @* Dinamik Veri Hücreleri *@
                                 @foreach (var field in _dynamicFieldLabels)
                                 {
                                     <td>@(guest.AdditionalProperties.ContainsKey(field) ? guest.AdditionalProperties[field] : "-")</td>
                                 }
-                                <td class="text-end">
-                                    <button class="btn btn-sm btn-outline-primary" title="Detay">
-                                        <i class="oi oi-eye"></i>
+                                <td class="text-end pe-4">
+                                    @* Butonları belirginleştirdik *@
+                                    <button class="btn btn-sm btn-primary shadow-sm me-1" title="Düzenle" 
+                                            @onclick='() => NavManager.NavigateTo($"/admin/guestedit/{guest.Id}")'>
+                                        <i class="oi oi-pencil"></i>
                                     </button>
-                                    <button class="btn btn-sm btn-outline-danger ms-1" @onclick="() => DeleteGuest(guest.Id)">
+                                    <button class="btn btn-sm btn-outline-danger" title="Sil" @onclick="() => DeleteGuest(guest.Id)">
                                         <i class="oi oi-trash"></i>
                                     </button>
                                 </td>
@@ -123,7 +129,6 @@
 
 @code {
     [Parameter] public int EventId { get; set; }
-    
     private Event? _event;
     private List<Guest>? _guests;
     private List<string> _dynamicFieldLabels = new();
@@ -138,22 +143,17 @@
     private async Task LoadData()
     {
         _event = await EventRepository.GetByIdAsync(EventId);
-        
-        // Repository'den davetlileri çekiyoruz
-        _guests = (await GuestRepository.Query()
+        _guests = await GuestRepository.Query()
             .Where(x => x.EventId == EventId && !x.IsDeleted)
             .OrderBy(x => x.FirstName)
-            .ToListAsync());
+            .ToListAsync();
 
-        // Dinamik kolon başlıklarını belirle (İlk davetliden veya Event config'den çekilebilir)
-        // En sağlıklısı Event içindeki FormConfig'den almaktır
         if (_event != null && !string.IsNullOrEmpty(_event.FormConfigJson))
         {
             var config = JsonSerializer.Deserialize<List<FormFieldDefinitionDto>>(_event.FormConfigJson);
             _dynamicFieldLabels = config?.Select(x => x.Label).ToList() ?? new();
         }
 
-        // Her misafirin JSON verisini Dictionary'ye yükle (Entity içindeki metodumuz)
         foreach (var guest in _guests)
         {
             guest.LoadAdditionalProperties();
@@ -174,6 +174,6 @@
 
     private async Task DeleteGuest(int id)
     {
-        // Silme mantığı buraya...
+        // Delete logic...
     }
 }

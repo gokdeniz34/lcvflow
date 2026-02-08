@@ -12,6 +12,9 @@ public class AppDbContext : DbContext
     public DbSet<Guest> Guests => Set<Guest>();
     public DbSet<AdminUser> AdminUsers => Set<AdminUser>();
     public DbSet<Event> Events => Set<Event>();
+    public DbSet<ImportLog> ImportLogs { get; set; }
+    public DbSet<SystemError> SystemErrors { get; set; }
+    public DbSet<SystemSetting> SystemSettings { get; set; }
 
     //burası oldukça temiz olmalı. Tüm entity configurationları ayrı sınıflarda yapacağız ve burada sadece onları uygulayacağız.
     protected override void OnModelCreating(ModelBuilder modelBuilder)

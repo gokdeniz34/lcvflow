@@ -1,7 +1,6 @@
 ﻿using AutoMapper;
 using FluentValidation;
 using LcvFlow.Domain.Common;
-using LcvFlow.Domain.Entities;
 using LcvFlow.Domain.Interfaces;
 using LcvFlow.Service.Dtos.Guest;
 using LcvFlow.Service.Interfaces;
@@ -19,6 +18,7 @@ public class GuestService : IGuestService
 
     public GuestService(IGuestRepository guestRepository, IEventRepository eventRepository, IExcelService excelService, IMapper mapper, IValidator<GuestRsvpDto> validator)
     {
+        _eventRepository = eventRepository;
         _guestRepository = guestRepository;
         _excelService = excelService;
         _mapper = mapper;
@@ -27,18 +27,15 @@ public class GuestService : IGuestService
 
     public async Task<Result> ImportGuestsFromExcelAsync(int eventId, Stream excelStream)
     {
-        // 1. Önce Event nesnesini bulmalıyız (ExcelService artık Event nesnesi istiyor)
         var ev = await _eventRepository.GetByIdAsync(eventId);
-        if (ev == null) return Result.Failure("Etkinlik bulunamadı.");
+        if (ev == null)
+            return Result.Failure("Etkinlik bulunamadı.");
 
-        // 2. ParseGuestExcelAsync metoduna stream ve event nesnesini gönderiyoruz
-        // Not: ExcelService içindeki metod artık List<Guest> dönüyor demiştik.
         var guests = await _excelService.ParseGuestExcelAsync(excelStream, ev);
 
         if (guests == null || !guests.Any())
             return Result.Failure("Excel'de aktarılacak veri bulunamadı.");
 
-        // 3. Veritabanına toplu ekleme
         foreach (var guest in guests)
         {
             await _guestRepository.AddAsync(guest);
