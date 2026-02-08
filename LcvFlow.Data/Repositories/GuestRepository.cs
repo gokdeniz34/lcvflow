@@ -11,6 +11,8 @@ public class GuestRepository : EfRepository<Guest>, IGuestRepository
 
     public async Task<Guest?> GetByTokenAsync(string token)
     {
-        return await _context.Guests.FirstOrDefaultAsync(x => x.AccessToken == token);
+        var guest = await _context.Guests.FirstOrDefaultAsync(x => x.AccessToken == token);
+        guest?.LoadAdditionalProperties(); // Veriyi çeker çekmez sözlüğü dolduruyoruz
+        return guest;
     }
 }

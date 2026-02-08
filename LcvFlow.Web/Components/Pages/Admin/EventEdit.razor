@@ -1,0 +1,261 @@
+@page "/admin/events/create"
+@page "/admin/events/edit/{Id:int}"
+@rendermode InteractiveServer
+
+@using LcvFlow.Domain.Entities
+@using LcvFlow.Domain.Enums
+@using LcvFlow.Domain.Interfaces
+@using LcvFlow.Service.Interfaces
+@using LcvFlow.Service.Dtos.Admin
+@using System.Text.Json
+
+@inject IEventRepository EventRepository
+@inject IGuestRepository GuestRepository
+@inject IExcelService ExcelService
+@inject NavigationManager NavManager
+@inject IJSRuntime JS
+
+<div class="container mt-4 mb-5">
+    @* Hata ve Başarı Mesajları *@
+    @if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <div class="alert alert-danger shadow-sm mb-4">
+            <i class="oi oi-warning me-2"></i> @_errorMessage
+        </div>
+    }
+    @if (!string.IsNullOrEmpty(_importMessage))
+    {
+        <div class="alert alert-success shadow-sm mb-4">
+            <i class="oi oi-circle-check me-2"></i> @_importMessage
+        </div>
+    }
+
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center py-3">
+            <h4 class="mb-0">
+                <i class="oi oi-calendar me-2"></i>
+                @(Id == 0 ? "Yeni Etkinlik Planla" : "Etkinlik Detaylarını Düzenle")
+            </h4>
+            @if (Id != 0)
+            {
+                <button type="button" class="btn btn-success btn-sm fw-bold shadow-sm" @onclick="DownloadTemplate">
+                    <i class="oi oi-spreadsheet me-1"></i> Excel Şablonu İndir
+                </button>
+            }
+        </div>
+
+        <div class="card-body p-4">
+            <div class="row g-4">
+
+                @* 1. TEMEL BİLGİLER *@
+                <div class="col-12">
+                    <h5 class="text-primary border-bottom pb-2">1. Temel Bilgiler</h5>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label fw-bold">Etkinlik Adı / Başlığı <span class="text-danger">*</span></label>
+                    <input class="form-control form-control-lg @(_nameInvalid ? "is-invalid" : "")" @bind="_event.Name"
+                           @bind:event="oninput" placeholder="Örn: Teknoloji Zirvesi 2026" />
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">Kategori</label>
+                    <select class="form-select form-select-lg" @bind="_event.Type">
+                        @foreach (var type in Enum.GetValues<EventType>())
+                        {
+                            <option value="@type">@type.ToString()</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">Tarih</label>
+                    <input type="date" class="form-control form-control-lg" @bind="_event.EventDate" />
+                </div>
+
+                @* 2. DİNAMİK ALANLAR *@
+                <div class="col-12 mt-4">
+                    <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
+                        <h5 class="text-primary mb-0">2. Katılımcı Formu Özel Soruları</h5>
+                        <button type="button" class="btn btn-outline-primary btn-sm" @onclick="AddField">
+                            <i class="oi oi-plus me-1"></i> Yeni Soru Ekle
+                        </button>
+                    </div>
+
+                    @foreach (var field in _fields)
+                    {
+                        <div class="row g-2 mb-2 p-2 border rounded bg-light align-items-center">
+                            <div class="col-md-5">
+                                <input class="form-control" @bind="field.Label" placeholder="Soru: Masa No, Yemek vb." />
+                            </div>
+                            <div class="col-md-3">
+                                <select class="form-select" @bind="field.FieldType">
+                                    <option value="Text">Metin</option>
+                                    <option value="Number">Sayı</option>
+                                    <option value="Boolean">Evet/Hayır</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2 text-center">
+                                <div class="form-check form-switch d-inline-block mt-2">
+                                    <input class="form-check-input" type="checkbox" @bind="field.IsRequired" id="@field.Id">
+                                        <label class="form-check-label small" for="@field.Id">Zorunlu</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-2 text-end">
+                                    <button type="button" class="btn btn-outline-danger btn-sm border-0"
+                                            @onclick="() => _fields.Remove(field)">
+                                        <i class="oi oi-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        }
+                    </div>
+
+                    @* 3. EXCEL IMPORT (SADECE EDİT MODUNDA) *@
+                    @if (Id != 0)
+                    {
+                        <div class="col-12 mt-5">
+                            <div class="card border-primary bg-light shadow-sm">
+                                <div class="card-body p-4 text-center">
+                                    <h5 class="text-primary fw-bold mb-3"><i class="oi oi-cloud-upload me-2"></i>Davetli
+                                        Listesini Geri Yükle</h5>
+                                        <div class="d-flex justify-content-center align-items-center gap-3">
+                                            <InputFile OnChange="HandleFileSelected" class="form-control" style="max-width: 350px;"
+                                                       accept=".xlsx" />
+                                            <button type="button" class="btn btn-primary px-4" @onclick="UploadExcel"
+                                                    disabled="@(_selectedFile == null || _isImporting)">
+                                                @if (_isImporting)
+                                                {
+                                                    <span class="spinner-border spinner-border-sm me-2"></span>
+                                                }
+                                                <i class="oi oi-check me-2"></i>Listeyi Aktar
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+
+                        @* 4. KAYDET BUTONU *@
+                        <div class="col-12 mt-5 pt-3 border-top text-end">
+                            <button type="button" class="btn btn-link text-secondary me-3 text-decoration-none"
+                                    @onclick='() => NavManager.NavigateTo("/admin/events")'>Vazgeç</button>
+                            <button type="button" class="btn btn-primary btn-lg px-5 shadow" @onclick="SaveEvent"
+                                    disabled="@_isSaving">
+                                @if (_isSaving)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2"></span>
+                                }
+                                @(Id == 0 ? "Etkinliği Oluştur" : "Değişiklikleri Kaydet")
+                            </button>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+
+@code {
+    [Parameter] public int Id { get; set; }
+    private Event _event = new("", DateTime.Now.AddMonths(1), "", "", EventType.Wedding);
+    private List<FormFieldDefinitionDto> _fields = new();
+
+    private string? _errorMessage;
+    private string? _importMessage;
+    private bool _nameInvalid = false;
+    private bool _isSaving = false;
+    private bool _isImporting = false;
+    private IBrowserFile? _selectedFile;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Id != 0)
+        {
+            var existing = await EventRepository.GetByIdAsync(Id);
+            if (existing != null)
+            {
+                _event = existing;
+                _fields = JsonSerializer.Deserialize<List<FormFieldDefinitionDto>>(_event.FormConfigJson) ?? new();
+            }
+        }
+    }
+
+    private void AddField() => _fields.Add(new FormFieldDefinitionDto { Id = Guid.NewGuid().ToString() });
+
+    private async Task DownloadTemplate()
+    {
+        _event.FormConfigJson = JsonSerializer.Serialize(_fields);
+        var bytes = await ExcelService.GenerateTemplateWithInstructionsAsync(_event);
+        await JS.InvokeVoidAsync("downloadFile", $"{_event.Name}_Sablon.xlsx", Convert.ToBase64String(bytes));
+    }
+
+    private void HandleFileSelected(InputFileChangeEventArgs e) => _selectedFile = e.File;
+
+    private async Task UploadExcel()
+    {
+        if (_selectedFile == null) return;
+        _isImporting = true;
+        _errorMessage = null;
+        _importMessage = null;
+
+        try
+        {
+            // 1. Dosyayı asenkron olarak belleğe al (Bu UI'ı kitlemez)
+            var buffer = new byte[_selectedFile.Size];
+            using (var stream = _selectedFile.OpenReadStream(10 * 1024 * 1024))
+            {
+                await stream.ReadAsync(buffer);
+            }
+
+            // 2. AĞIR İŞLEMİ ARKA PLANA AT (Task.Run)
+            // Bu sayede 1000 kişi bile olsa UI loading animasyonu dönmeye devam eder
+            var importedGuests = await Task.Run(() =>
+            {
+                using var ms = new MemoryStream(buffer);
+                return ExcelService.ParseGuestExcelSync(ms, _event);
+            });
+
+            if (importedGuests.Any())
+            {
+                // 3. Veritabanı işlemleri (Asenkron - UI dostu)
+                foreach (var g in importedGuests) await GuestRepository.AddAsync(g);
+                await GuestRepository.SaveChangesAsync();
+
+                _importMessage = $"{importedGuests.Count} davetli başarıyla aktarıldı.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = "Hata: " + ex.Message;
+        }
+        finally
+        {
+            _isImporting = false;
+            _selectedFile = null;
+            StateHasChanged(); // UI mesajı görsün diye zorunlu
+        }
+    }
+
+    private async Task SaveEvent()
+    {
+        if (string.IsNullOrWhiteSpace(_event.Name)) { _nameInvalid = true; return; }
+        _isSaving = true;
+        try
+        {
+            _event.FormConfigJson = JsonSerializer.Serialize(_fields);
+            if (Id == 0)
+            {
+                await EventRepository.AddAsync(_event);
+                await EventRepository.SaveChangesAsync();
+                NavManager.NavigateTo($"/admin/events/edit/{_event.Id}");
+            }
+            else
+            {
+                EventRepository.Update(_event);
+                await EventRepository.SaveChangesAsync();
+                NavManager.NavigateTo("/admin/events");
+            }
+        }
+        finally { _isSaving = false; }
+    }
+}

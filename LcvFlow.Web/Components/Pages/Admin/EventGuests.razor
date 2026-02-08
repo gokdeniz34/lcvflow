@@ -1,0 +1,179 @@
+@page "/admin/events/{EventId:int}/guests"
+@rendermode InteractiveServer
+
+@using LcvFlow.Domain.Entities
+@using LcvFlow.Domain.Interfaces
+@using LcvFlow.Service.Dtos.Admin
+@using System.Text.Json
+@using Microsoft.EntityFrameworkCore
+
+@inject IGuestRepository GuestRepository
+@inject IEventRepository EventRepository
+@inject NavigationManager NavManager
+
+<div class="container mt-4 mb-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="fw-bold text-dark">
+                <i class="oi oi-people me-2"></i>@(_event?.Name) - Davetli Listesi
+            </h3>
+            <p class="text-muted">Toplam @(_guests?.Count ?? 0) davetli tanımlı.</p>
+        </div>
+        <div class="btn-group shadow-sm">
+            <button class="btn btn-outline-secondary" @onclick='() => NavManager.NavigateTo($"/admin/events/edit/{EventId}")'>
+                <i class="oi oi-pencil me-1"></i> Etkinliği Düzenle
+            </button>
+            <button class="btn btn-primary" @onclick="RefreshList">
+                <i class="oi oi-reload me-1"></i> Yenile
+            </button>
+        </div>
+    </div>
+
+    @* Arama ve Filtreleme Barı *@
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body bg-light">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0"><i class="oi oi-magnifying-glass"></i></span>
+                        <input type="text" class="form-control border-start-0" placeholder="İsim veya telefon ile ara..." 
+                               @bind="_searchTerm" @bind:event="oninput" />
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" @bind="_statusFilter">
+                        <option value="">Tüm Durumlar</option>
+                        <option value="Pending">Bekleniyor</option>
+                        <option value="Attending">Geliyor</option>
+                        <option value="Declined">Gelemiyor</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @* Davetli Tablosu *@
+    <div class="card shadow-sm border-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-dark text-white">
+                    <tr>
+                        <th>Ad Soyad</th>
+                        <th>Telefon</th>
+                        <th>Durum</th>
+                        @* Dinamik Kolon Başlıkları *@
+                        @foreach (var field in _dynamicFieldLabels)
+                        {
+                            <th>@field</th>
+                        }
+                        <th class="text-end">İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (_filteredGuests == null)
+                    {
+                        <tr><td colspan="10" class="text-center py-5"><div class="spinner-border"></div></td></tr>
+                    }
+                    else if (!_filteredGuests.Any())
+                    {
+                        <tr><td colspan="10" class="text-center py-5 text-muted">Davetli bulunamadı.</td></tr>
+                    }
+                    else
+                    {
+                        @foreach (var guest in _filteredGuests)
+                        {
+                            <tr>
+                                <td class="fw-bold">@guest.FirstName @guest.LastName</td>
+                                <td>@guest.PhoneNumber</td>
+                                <td>
+                                    @if (guest.IsAttending == true)
+                                    {
+                                        <span class="badge bg-success"><i class="oi oi-check me-1"></i> Geliyor</span>
+                                    }
+                                    else if (guest.IsAttending == false)
+                                    {
+                                        <span class="badge bg-danger"><i class="oi oi-x me-1"></i> Gelemiyor</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">Bekleniyor</span>
+                                    }
+                                </td>
+                                @* Dinamik Veri Hücreleri *@
+                                @foreach (var field in _dynamicFieldLabels)
+                                {
+                                    <td>@(guest.AdditionalProperties.ContainsKey(field) ? guest.AdditionalProperties[field] : "-")</td>
+                                }
+                                <td class="text-end">
+                                    <button class="btn btn-sm btn-outline-primary" title="Detay">
+                                        <i class="oi oi-eye"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger ms-1" @onclick="() => DeleteGuest(guest.Id)">
+                                        <i class="oi oi-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public int EventId { get; set; }
+    
+    private Event? _event;
+    private List<Guest>? _guests;
+    private List<string> _dynamicFieldLabels = new();
+    private string _searchTerm = "";
+    private string _statusFilter = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        _event = await EventRepository.GetByIdAsync(EventId);
+        
+        // Repository'den davetlileri çekiyoruz
+        _guests = (await GuestRepository.Query()
+            .Where(x => x.EventId == EventId && !x.IsDeleted)
+            .OrderBy(x => x.FirstName)
+            .ToListAsync());
+
+        // Dinamik kolon başlıklarını belirle (İlk davetliden veya Event config'den çekilebilir)
+        // En sağlıklısı Event içindeki FormConfig'den almaktır
+        if (_event != null && !string.IsNullOrEmpty(_event.FormConfigJson))
+        {
+            var config = JsonSerializer.Deserialize<List<FormFieldDefinitionDto>>(_event.FormConfigJson);
+            _dynamicFieldLabels = config?.Select(x => x.Label).ToList() ?? new();
+        }
+
+        // Her misafirin JSON verisini Dictionary'ye yükle (Entity içindeki metodumuz)
+        foreach (var guest in _guests)
+        {
+            guest.LoadAdditionalProperties();
+        }
+    }
+
+    private IEnumerable<Guest> _filteredGuests => _guests?
+        .Where(g => (string.IsNullOrWhiteSpace(_searchTerm) || 
+                    (g.FirstName + " " + g.LastName).Contains(_searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                    (g.PhoneNumber ?? "").Contains(_searchTerm)) &&
+                   (string.IsNullOrEmpty(_statusFilter) || 
+                    (_statusFilter == "Attending" && g.IsAttending == true) ||
+                    (_statusFilter == "Declined" && g.IsAttending == false) ||
+                    (_statusFilter == "Pending" && g.IsAttending == null)))
+        ?? new List<Guest>();
+
+    private async Task RefreshList() => await LoadData();
+
+    private async Task DeleteGuest(int id)
+    {
+        // Silme mantığı buraya...
+    }
+}

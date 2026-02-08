@@ -1,32 +1,76 @@
 ﻿using AutoMapper;
 using FluentValidation;
-using LcvFlow.Domain;
 using LcvFlow.Domain.Common;
 using LcvFlow.Domain.Entities;
+using LcvFlow.Domain.Interfaces;
 using LcvFlow.Service.Dtos.Guest;
+using LcvFlow.Service.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
 namespace LcvFlow.Service.Concretes;
 
 public class GuestService : IGuestService
 {
-    private readonly IUnitOfWork _uow;
+    private readonly IGuestRepository _guestRepository;
+    private readonly IEventRepository _eventRepository;
+    private readonly IExcelService _excelService;
     private readonly IMapper _mapper;
-    private readonly IValidator<GuestRsvpDto> _validator; // DI ile geldi
+    private readonly IValidator<GuestRsvpDto> _validator;
 
-    public GuestService(IUnitOfWork uow, IMapper mapper, IValidator<GuestRsvpDto> validator)
+    public GuestService(IGuestRepository guestRepository, IEventRepository eventRepository, IExcelService excelService, IMapper mapper, IValidator<GuestRsvpDto> validator)
     {
-        _uow = uow;
+        _guestRepository = guestRepository;
+        _excelService = excelService;
         _mapper = mapper;
         _validator = validator;
     }
 
+    public async Task<Result> ImportGuestsFromExcelAsync(int eventId, Stream excelStream)
+    {
+        // 1. Önce Event nesnesini bulmalıyız (ExcelService artık Event nesnesi istiyor)
+        var ev = await _eventRepository.GetByIdAsync(eventId);
+        if (ev == null) return Result.Failure("Etkinlik bulunamadı.");
+
+        // 2. ParseGuestExcelAsync metoduna stream ve event nesnesini gönderiyoruz
+        // Not: ExcelService içindeki metod artık List<Guest> dönüyor demiştik.
+        var guests = await _excelService.ParseGuestExcelAsync(excelStream, ev);
+
+        if (guests == null || !guests.Any())
+            return Result.Failure("Excel'de aktarılacak veri bulunamadı.");
+
+        // 3. Veritabanına toplu ekleme
+        foreach (var guest in guests)
+        {
+            await _guestRepository.AddAsync(guest);
+        }
+
+        await _guestRepository.SaveChangesAsync();
+
+        return Result.Success($"{guests.Count} davetli başarıyla içeri aktarıldı.");
+    }
+
+    public Task<Result<bool>> AddBulkGuestsAsync(List<GuestRsvpDto> guests, int eventId)
+    {
+        throw new NotImplementedException();
+    }
+
+    public async Task<Result<List<GuestListDto>>> GetAllByEventIdAsync(int eventId)
+    {
+        var guests = await _guestRepository.Query()
+            .Where(x => x.EventId == eventId)
+            .AsNoTracking()
+            .ToListAsync();
+
+        return Result<List<GuestListDto>>.Success(_mapper.Map<List<GuestListDto>>(guests));
+    }
+
     public async Task<Result<GuestDto>> GetByTokenAsync(string token)
     {
-        var guest = await _uow.Guests.Query()
-            .AsNoTracking()
+        var guest = await _guestRepository.Query()
+            .Where(x => x.AccessToken == token)
             .Include(x => x.Event)
-            .FirstOrDefaultAsync(x => x.AccessToken == token);
+            .AsNoTracking()
+            .FirstOrDefaultAsync();
 
         if (guest == null)
             return Result<GuestDto>.Failure("Davetiye bulunamadı.");
@@ -34,47 +78,28 @@ public class GuestService : IGuestService
         return Result<GuestDto>.Success(_mapper.Map<GuestDto>(guest));
     }
 
-    public async Task<Result<List<GuestListDto>>> GetAllByEventIdAsync(int eventId)
+    public async Task<Result> SubmitRsvpAsync(GuestRsvpDto rsvpDto)
     {
-        // GetAllAsync metodumuzu kullanarak filtreli liste çekiyoruz
-        var guests = await _uow.Guests.GetAllAsync(x => x.EventId == eventId);
-        return Result<List<GuestListDto>>.Success(_mapper.Map<List<GuestListDto>>(guests));
-    }
+        var valResult = await _validator.ValidateAsync(rsvpDto);
+        if (!valResult.IsValid)
+            return Result.Failure(string.Join(", ", valResult.Errors.Select(e => e.ErrorMessage)));
 
-    public async Task<Result<bool>> SubmitRsvpAsync(GuestRsvpDto rsvpDto)
-    {
-        var validationResult = await _validator.ValidateAsync(rsvpDto);
-        if (!validationResult.IsValid)
-        {
-            var allErrors = string.Join("|", validationResult.Errors.Select(e => e.ErrorMessage));
-            return Result<bool>.Failure(allErrors);
-        }
+        var guest = await _guestRepository.Query()
+            .Where(x => x.AccessToken == rsvpDto.AccessToken)
+            .FirstOrDefaultAsync();
 
-        var guest = await _uow.Guests.GetAsync(x => x.AccessToken == rsvpDto.AccessToken);
-        if (guest == null)
-        {
-            return Result<bool>.Failure("Davetli bulunamadı.");
-        }
+        if (guest == null) return Result.Failure("Davetli bulunamadı.");
 
-        _mapper.Map(rsvpDto, guest);
-        _uow.Guests.Update(guest);
+        var domainResult = guest.SubmitRsvp(
+            rsvpDto.IsAttending ?? false,
+            rsvpDto.AdultCount,
+            rsvpDto.ChildCount,
+            rsvpDto.Note);
 
-        var res = await _uow.SaveChangesAsync();
-        if (res <= 0)
-        {
-            return Result<bool>.Failure("Güncelleme sırasında bir hata oluştu.");
-        }
+        if (domainResult.IsFailure) return domainResult;
 
-        return Result<bool>.Success(true);
-    }
+        await _guestRepository.SaveChangesAsync();
 
-    public async Task<Result<bool>> AddBulkGuestsAsync(List<GuestRsvpDto> guestDtos, int eventId)
-    {
-        var guests = _mapper.Map<List<Guest>>(guestDtos);
-        guests.ForEach(g => { g.EventId = eventId; g.AccessToken = Guid.NewGuid().ToString("N"); });
-
-        await _uow.Guests.AddRangeAsync(guests);
-        var res = await _uow.SaveChangesAsync();
-        return res > 0 ? Result<bool>.Success(true) : Result<bool>.Failure("Toplu kayıt başarısız.");
+        return Result.Success();
     }
 }

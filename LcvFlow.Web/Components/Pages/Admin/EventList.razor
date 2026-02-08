@@ -1,0 +1,116 @@
+@page "/admin/events"
+@rendermode InteractiveServer
+@using LcvFlow.Domain.Entities
+@using LcvFlow.Domain.Interfaces
+@inject IEventRepository EventRepository
+@inject NavigationManager NavManager
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold text-dark mb-0">Etkinliklerim</h2>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item"><a href="/admin">Panel</a></li>
+                    <li class="breadcrumb-item active">Etkinlikler</li>
+                </ol>
+            </nav>
+        </div>
+        <button class="btn btn-primary shadow-sm px-4" @onclick='() => NavManager.NavigateTo("/admin/events/create")'>
+            <i class="oi oi-plus me-2"></i>Yeni Etkinlik Oluştur
+        </button>
+    </div>
+
+    @if (_events == null)
+    {
+        <div class="text-center p-5">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="mt-2 text-muted">Etkinlikler getiriliyor...</p>
+        </div>
+    }
+    else if (!_events.Any())
+    {
+        <div class="card border-dashed p-5 text-center bg-light shadow-sm">
+            <div class="card-body">
+                <i class="oi oi-calendar display-1 text-muted mb-3 opacity-25"></i>
+                <h4 class="fw-bold">Henüz bir kayıt yok.</h4>
+                <p class="text-muted mb-4">İlk etkinliğini oluşturarak misafir listeni yönetmeye başla!</p>
+                <button class="btn btn-primary" @onclick='() => NavManager.NavigateTo("/admin/events/create")'>
+                    Hemen Başlayalım
+                </button>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+            @foreach (var ev in _events)
+            {
+                <div class="col">
+                    <div class="card h-100 shadow-sm border-0 event-card">
+                        <div class="card-header bg-white border-0 pt-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="badge rounded-pill bg-soft-primary text-primary px-3">@ev.Type.ToString()</span>
+                                <small class="text-muted fw-bold">@ev.EventDate.ToString("dd.MM.yyyy")</small>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <h5 class="card-title fw-bold mb-1">@ev.Name</h5>
+                            <p class="text-muted small mb-0">
+                                <i class="oi oi-link-intact me-1"></i>/lcv/@ev.Slug
+                            </p>
+                        </div>
+                        <div class="card-footer bg-white border-0 d-flex gap-2 pb-3">
+                            <button class="btn btn-sm btn-outline-primary flex-fill fw-bold"
+                                    @onclick='() => NavManager.NavigateTo($"/admin/events/edit/{ev.Id}")'>
+                                <i class="oi oi-pencil me-1"></i> Düzenle
+                            </button>
+                            <button class="btn btn-sm btn-light flex-fill border fw-bold text-secondary">
+                                <i class="oi oi-people me-1"></i> Davetliler
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+<style>
+    .bg-soft-primary {
+        background-color: #e7f1ff;
+    }
+
+    .event-card {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        border-radius: 12px;
+    }
+
+    .event-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1) !important;
+    }
+
+    .border-dashed {
+        border: 2px dashed #dee2e6 !important;
+        border-radius: 15px;
+    }
+</style>
+
+@code {
+    private List<Event>? _events;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var data = await EventRepository.GetAllAsync();
+            _events = data?.OrderByDescending(x => x.EventDate).ToList() ?? new List<Event>();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Liste Hatası: {ex.Message}");
+            _events = new List<Event>();
+        }
+    }
+}

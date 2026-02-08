@@ -1,0 +1,63 @@
+@page "/admin"
+@rendermode InteractiveServer
+@using LcvFlow.Domain.Interfaces
+@inject IEventRepository EventRepository
+@inject NavigationManager NavManager
+
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2 class="fw-bold text-dark">Hoş Geldiniz, Admin 👋</h2>
+            <p class="text-muted">Sisteme genel bir bakış.</p>
+        </div>
+    </div>
+
+    @* İstatistik Kartları *@
+    <div class="row g-4 mb-5">
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0 bg-primary text-white h-100">
+                <div class="card-body">
+                    <h6 class="text-uppercase small">Toplam Etkinlik</h6>
+                    <h2 class="display-6 fw-bold">@(_totalEvents ?? 0)</h2>
+                    <button class="btn btn-light btn-sm mt-2"
+                            @onclick='() => NavManager.NavigateTo("/admin/events")'>Hepsini Gör</button>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0 bg-success text-white h-100">
+                <div class="card-body">
+                    <h6 class="text-uppercase small">Aktif LCV Süreçleri</h6>
+                    <h2 class="display-6 fw-bold">@(_activeEvents ?? 0)</h2>
+                    <p class="small mb-0 opacity-75">Günü geçmemiş etkinlikler</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0 bg-dark text-white h-100">
+                <div class="card-body">
+                    <h6 class="text-uppercase small">Hızlı Aksiyon</h6>
+                    <div class="d-grid gap-2 mt-3">
+                        <button class="btn btn-outline-light btn-sm"
+                                @onclick='() => NavManager.NavigateTo("/admin/events/create")'>
+                            + Yeni Etkinlik Oluştur
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private int? _totalEvents;
+    private int? _activeEvents;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var events = await EventRepository.GetAllAsync();
+        var eventList = events.ToList();
+        _totalEvents = eventList.Count;
+        _activeEvents = eventList.Count(e => e.EventDate >= DateTime.Now);
+    }
+}

@@ -1,0 +1,89 @@
+@page "/admin/guests/create/{EventId:int}"
+@rendermode InteractiveServer
+@using LcvFlow.Service.Interfaces
+@inject IGuestService GuestService
+@inject IExcelService ExcelService
+@inject NavigationManager NavManager
+@inject IJSRuntime JS
+
+<div class="container mt-4">
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-dark text-white p-3">
+            <h4 class="mb-0">Davetli Ekleme</h4>
+        </div>
+        <div class="card-body p-4">
+            
+            @* Sekme Başlıkları *@
+            <ul class="nav nav-tabs mb-4" id="guestTab" role="tablist">
+                <li class="nav-item">
+                    <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#excel">Excel ile Yükle</button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#manual">Manuel Ekle</button>
+                </li>
+            </ul>
+
+            <div class="tab-content">
+                @* 1. Excel Yükleme Sekmesi *@
+                <div class="tab-pane fade show active" id="excel">
+                    <div class="alert alert-info">
+                        <h5>Nasıl Yüklenir?</h5>
+                        <p class="small mb-2">Sistemin tanıması için lütfen örnek şablonu kullanın. Ekstra kolonlar eklerseniz sistem onları otomatik tanıyacaktır.</p>
+                        <button class="btn btn-sm btn-outline-primary" @onclick="DownloadTemplate">
+                            <i class="oi oi-cloud-download me-1"></i> Örnek Şablon İndir
+                        </button>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Excel Dosyası Seçin</label>
+                        <InputFile OnChange="HandleFileSelected" class="form-control" accept=".xlsx" />
+                    </div>
+
+                    @if (_isUploading)
+                    {
+                        <div class="text-center my-3">
+                            <div class="spinner-border text-primary"></div>
+                            <p>Yükleniyor ve işleniyor...</p>
+                        </div>
+                    }
+                </div>
+
+                @* 2. Manuel Ekleme Sekmesi (Senin eski formun buraya gelecek) *@
+                <div class="tab-pane fade" id="manual">
+                    <p class="text-muted italic">Manuel ekleme formu buraya gelecek...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public int EventId { get; set; }
+    private bool _isUploading = false;
+
+    private async Task DownloadTemplate()
+    {
+        // Burada ExcelService'den byte[] alıp JS ile indirteceğiz
+        var templateBytes = await ExcelService.GenerateTemplateWithInstructionsAsync("Etkinlik Davet Listesi");
+        var fileName = "LcvFlow_Davetli_Sablonu.xlsx";
+        
+        await JS.InvokeVoidAsync("downloadFile", fileName, Convert.ToBase64String(templateBytes));
+    }
+
+    private async Task HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        _isUploading = true;
+        try 
+        {
+            using var stream = e.File.OpenReadStream(maxAllowedSize: 1024 * 1024 * 5); // 5MB limit
+            var result = await GuestService.ImportGuestsFromExcelAsync(EventId, stream);
+            
+            if (result.IsSuccess)
+                NavManager.NavigateTo($"/admin/guests/{EventId}"); // Başarılıysa listeye git
+        }
+        finally
+        {
+            _isUploading = false;
+        }
+    }
+}

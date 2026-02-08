@@ -4,6 +4,9 @@ using LcvFlow.Data; // Extension metotlar için
 using LcvFlow.Service; // Extension metotlar için
 using LcvFlow.Web.Middlewares;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using OfficeOpenXml;
+
+OfficeOpenXml.ExcelPackage.LicenseContext = OfficeOpenXml.LicenseContext.NonCommercial;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,6 +24,7 @@ builder.Services.AddDataServices(builder.Configuration); // Data & DB
 builder.Services.AddBusinessServices(); // Business & Auth
 
 // --- 3. AUTHENTICATION & UI ---
+builder.Services.AddAntiforgery();
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {

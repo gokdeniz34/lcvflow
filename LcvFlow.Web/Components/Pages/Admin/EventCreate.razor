@@ -1,0 +1,110 @@
+@page "/admin/event-create"
+@layout LcvFlow.Web.Components.Shared.AdminLayout
+@using LcvFlow.Service.Dtos.Admin
+@using LcvFlow.Service.Interfaces
+@using LcvFlow.Service.Helpers
+@using LcvFlow.Service.Extensions
+
+@inject IAdminService AdminService
+@inject NavigationManager NavManager
+
+<div class="container mt-4">
+    <h2 class="mb-4 text-dark font-weight-bold">Yeni Etkinlik Kaydı</h2>
+
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-dark text-white py-3">
+                    <h5 class="mb-0">1. Etkinlik Detayları</h5>
+                </div>
+                <div class="card-body p-4">
+                    <EditForm Model="_eventDto" OnValidSubmit="HandleEventCreate">
+                        <div class="mb-3">
+                            <label class="form-label font-weight-bold">Etkinlik Adı</label>
+                            <InputText @bind-Value="_eventDto.Name" class="form-control form-control-lg" placeholder="Örn: Burak & Merve Düğün" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label font-weight-bold">Tarih</label>
+                            <InputDate @bind-Value="_eventDto.EventDate" class="form-control" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label font-weight-bold">Mekan</label>
+                            <InputText @bind-Value="_eventDto.Location" class="form-control" placeholder="Örn: Saklı Bahçe, İstanbul" />
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-lg w-100 mt-2" disabled="@(_createdEventId > 0)">
+                            @(_createdEventId > 0 ? "Etkinlik Kaydedildi ✓" : "Kaydet ve Devam Et")
+                        </button>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+
+        @if (_createdEventId > 0)
+        {
+            <div class="col-md-6 mb-4">
+                <div class="card shadow-sm border-success h-100 animate__animated animate__fadeIn">
+                    <div class="card-header bg-success text-white py-3">
+                        <h5 class="mb-0">2. İlk Misafiri Tanımla</h5>
+                    </div>
+                    <div class="card-body p-4">
+                        <EditForm Model="_guestDto" OnValidSubmit="HandleGuestCreate">
+                            <div class="mb-3">
+                                <label class="form-label">Misafir Adı</label>
+                                <InputText @bind-Value="_guestDto.FirstName" class="form-control" />
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Misafir Soyadı</label>
+                                <InputText @bind-Value="_guestDto.LastName" class="form-control" />
+                            </div>
+                            <button type="submit" class="btn btn-success btn-lg w-100 mt-2">Kaydet ve Link Üret</button>
+                        </EditForm>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    @if (!string.IsNullOrEmpty(_token))
+    {
+        <div class="alert alert-success mt-4 shadow border-0 animate__animated animate__bounceIn">
+            <h5 class="alert-heading">🎉 Harika! Etkinlik ve Misafir Hazır.</h5>
+            <hr />
+            <p class="mb-2">Misafirinize göndereceğiniz özel LCV linki:</p>
+            @{
+                var fullLink = LinkHelper.GenerateRsvpLink(NavManager.BaseUri.TrimEnd('/'), _eventSlug, _token);
+            }
+            <div class="input-group">
+                <input type="text" class="form-control bg-white" value="@fullLink" readonly />
+                <a href="@fullLink" target="_blank" class="btn btn-dark">Linke Git</a>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private CreateEventDto _eventDto = new() { EventDate = DateTime.Now.AddDays(30) };
+    private CreateGuestDto _guestDto = new();
+    private int _createdEventId = 0;
+    private string _eventSlug = "";
+    private string _token = "";
+
+    private async Task HandleEventCreate()
+    {
+        var result = await AdminService.CreateEventAsync(_eventDto);
+        if (result.IsSuccess)
+        {
+            _createdEventId = result.Data;
+            _eventSlug = _eventDto.Name.ToSlug();
+        }
+    }
+
+    private async Task HandleGuestCreate()
+    {
+        _guestDto.EventId = _createdEventId;
+        var result = await AdminService.CreateGuestAsync(_guestDto);
+        if (result.IsSuccess)
+        {
+            _token = result.Data;
+        }
+    }
+}

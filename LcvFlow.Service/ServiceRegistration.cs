@@ -2,8 +2,6 @@
 using LcvFlow.Service.Concretes;
 using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
-using LcvFlow.Domain.Common;
-using LcvFlow.Data;
 using FluentValidation;
 
 namespace LcvFlow.Service;
@@ -17,7 +15,8 @@ public static class ServiceRegistration
 
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IGuestService, GuestService>();
-        services.AddScoped<IUnitOfWork, UnitOfWork>();
+        services.AddScoped<IAdminService, AdminService>();
+        services.AddScoped<IExcelService, ExcelService>();
         // services.AddScoped<IGuestService, GuestService>();
 
         return services;

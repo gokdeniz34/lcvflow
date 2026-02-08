@@ -22,8 +22,6 @@ public class ExceptionMiddleware(RequestDelegate next)
     private static Task HandleExceptionAsync(HttpContext context, Exception exception)
     {
         context.Response.ContentType = "application/json";
-        
-        // Hata türüne göre statü kodu belirleyebilirsin
         context.Response.StatusCode = exception switch
         {
             UnauthorizedAccessException => (int)HttpStatusCode.Unauthorized,
@@ -35,9 +33,10 @@ public class ExceptionMiddleware(RequestDelegate next)
         {
             StatusCode = context.Response.StatusCode,
             Message = "Sunucu tarafında bir hata oluştu. Lütfen sistem yöneticisi ile iletişime geçin.",
-            Detailed = exception.Message // Geliştirme aşamasında bunu görmek istersin
+            Detailed = exception.Message
         };
 
         return context.Response.WriteAsync(JsonSerializer.Serialize(response));
     }
 }
+

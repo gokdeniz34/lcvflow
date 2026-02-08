@@ -2,17 +2,14 @@
 
 namespace LcvFlow.Domain.Common;
 
-public interface IRepository<T> where T : BaseEntity
+public interface IRepository<T> : IQueryBuilder<T> where T : BaseEntity
 {
-    IQueryable<T> Query();
-    Task<T?> GetAsync(Expression<Func<T, bool>> predicate);
-    Task<T?> GetByIdAsync(int id);
-    Task<List<T>> GetAllAsync(Expression<Func<T, bool>>? predicate = null);
-    Task AddAsync(T entity);
-    Task AddRangeAsync(IEnumerable<T> entities);
-    
+    Task<IEnumerable<T>> GetAllAsync();
+    Task<T?> GetByIdAsync(int id, CancellationToken ct = default);
+    Task AddAsync(T entity, CancellationToken ct = default);
+    Task AddRangeAsync(IEnumerable<T> entities, CancellationToken ct = default);
     void Update(T entity);
-    void UpdateRange(IEnumerable<T> entities);
     void Delete(T entity);
-    void DeleteRange(IEnumerable<T> entities);
+    void Remove(T entity);
+    Task<int> SaveChangesAsync(CancellationToken ct = default);
 }
