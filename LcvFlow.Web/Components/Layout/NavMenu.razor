@@ -1,30 +1,32 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="">LcvFlow.Web</a>
+﻿<div class="sidebar-wrapper d-flex flex-column bg-dark h-100 text-white">
+    <div class="p-4 border-bottom border-secondary mb-3 text-center">
+        <h4 class="fw-bold text-warning mb-0">LCV<span class="text-white">Flow</span></h4>
+        <small class="text-muted">Admin Console</small>
     </div>
-</div>
 
-<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
-
-<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
-    <nav class="flex-column">
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
+    <nav class="nav flex-column px-3 flex-grow-1">
+        <div class="nav-item px-3 mb-2">
+            <NavLink class="nav-link text-white-50 p-3 rounded d-flex align-items-center" href="admin/dashboard" Match="NavLinkMatch.All">
+                <span class="me-3">📊</span> Dashboard
             </NavLink>
         </div>
-
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="counter">
-                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Counter
+        <div class="nav-item px-3 mb-2">
+            <NavLink class="nav-link text-white-50 p-3 rounded d-flex align-items-center" href="admin/events">
+                <span class="me-3">📅</span> Etkinliklerim
             </NavLink>
         </div>
+        
+        <div class="border-top border-secondary my-3 mx-3"></div>
 
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="weather">
-                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Weather
+        <div class="nav-item px-3 mb-2">
+            <NavLink class="nav-link text-white-50 p-3 rounded d-flex align-items-center" href="admin/logs">
+                <span class="me-3">📑</span> Sistem Logları
+            </NavLink>
+        </div>
+        <div class="nav-item px-3 mb-2">
+            <NavLink class="nav-link text-white-50 p-3 rounded d-flex align-items-center" href="admin/settings">
+                <span class="me-3">⚙️</span> Sistem Ayarları
             </NavLink>
         </div>
     </nav>
 </div>
-

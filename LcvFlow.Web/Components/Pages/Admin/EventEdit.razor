@@ -8,6 +8,7 @@
 @using LcvFlow.Service.Interfaces
 @using LcvFlow.Service.Dtos.Admin
 @using System.Text.Json
+@using System.IO
 
 @inject IEventRepository EventRepository
 @inject IGuestRepository GuestRepository
@@ -15,145 +16,163 @@
 @inject NavigationManager NavManager
 @inject IJSRuntime JS
 
-<div class="container mt-4 mb-5">
-    @* Hata ve Başarı Mesajları *@
+<div class="container py-4">
+    @* UX: GERİ DÖN VE BAŞLIK *@
+    <div class="mb-4 text-start">
+        <a href="admin/events" class="text-warning text-decoration-none fw-bold small mb-2 d-inline-block">
+            ← ETKİNLİKLERE DÖN
+        </a>
+        <h2 class="fw-bold text-dark">@(Id == 0 ? "Yeni Etkinlik Planla" : "Etkinlik Düzenle")</h2>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="admin/dashboard" class="text-decoration-none">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="admin/events" class="text-decoration-none">Etkinliklerim</a></li>
+                <li class="breadcrumb-item active">@(_event?.Name ?? "Yeni")</li>
+            </ol>
+        </nav>
+    </div>
+
     @if (!string.IsNullOrEmpty(_errorMessage))
     {
-        <div class="alert alert-danger shadow-sm mb-4">
+        <div class="alert alert-danger border-0 shadow-sm mb-4">
             <i class="oi oi-warning me-2"></i> @_errorMessage
         </div>
     }
     @if (!string.IsNullOrEmpty(_importMessage))
     {
-        <div class="alert alert-success shadow-sm mb-4">
-            <i class="oi oi-circle-check me-2"></i> @_importMessage
+        <div class="alert alert-success border-0 shadow-sm mb-4">
+            <i class="oi oi-check me-2"></i> @_importMessage
         </div>
     }
 
-    <div class="card shadow-sm border-0">
+    <div class="card shadow-sm border-0 mb-5">
         <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center py-3">
-            <h4 class="mb-0">
-                <i class="oi oi-calendar me-2"></i>
-                @(Id == 0 ? "Yeni Etkinlik Planla" : "Etkinlik Detaylarını Düzenle")
-            </h4>
+            <h5 class="mb-0">Etkinlik Detayları</h5>
             @if (Id != 0)
             {
-                <button type="button" class="btn btn-success btn-sm fw-bold shadow-sm" @onclick="DownloadTemplate">
-                    <i class="oi oi-spreadsheet me-1"></i> Excel Şablonu İndir
+                <button type="button" class="btn btn-warning btn-sm fw-bold shadow-sm" @onclick="DownloadTemplate">
+                    Excel Şablonu İndir
                 </button>
             }
         </div>
 
         <div class="card-body p-4">
             <div class="row g-4">
-
                 @* 1. TEMEL BİLGİLER *@
-                <div class="col-12">
-                    <h5 class="text-primary border-bottom pb-2">1. Temel Bilgiler</h5>
-                </div>
-
                 <div class="col-md-6">
-                    <label class="form-label fw-bold">Etkinlik Adı / Başlığı <span class="text-danger">*</span></label>
-                    <input class="form-control form-control-lg @(_nameInvalid ? "is-invalid" : "")" @bind="_event.Name"
-                           @bind:event="oninput" placeholder="Örn: Teknoloji Zirvesi 2026" />
+                    <label class="form-label fw-bold small">Etkinlik Adı <span class="text-danger">*</span></label>
+                    <input class="form-control @(_nameInvalid ? "is-invalid" : "")" @bind="_event.Name"
+                           placeholder="Örn: Teknoloji Zirvesi" />
                 </div>
-
-                <div class="col-md-3">
-                    <label class="form-label fw-bold">Kategori</label>
-                    <select class="form-select form-select-lg" @bind="_event.Type">
-                        @foreach (var type in Enum.GetValues<EventType>())
-                        {
-                            <option value="@type">@type.ToString()</option>
-                        }
-                    </select>
-                </div>
-
-                <div class="col-md-3">
-                    <label class="form-label fw-bold">Tarih</label>
-                    <input type="date" class="form-control form-control-lg" @bind="_event.EventDate" />
-                </div>
-
-                @* 2. DİNAMİK ALANLAR *@
-                <div class="col-12 mt-4">
-                    <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
-                        <h5 class="text-primary mb-0">2. Katılımcı Formu Özel Soruları</h5>
-                        <button type="button" class="btn btn-outline-primary btn-sm" @onclick="AddField">
-                            <i class="oi oi-plus me-1"></i> Yeni Soru Ekle
-                        </button>
+                <div class="col-md-6">
+                    <label class="form-label fw-bold small">URL Uzantısı (Slug) <span
+                        class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light">/lcv/</span>
+                            <input class="form-control" @bind="_event.Slug" placeholder="teknoloji-zirvesi" />
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold small">Kategori</label>
+                        <select class="form-select" @bind="_event.Type">
+                            @foreach (var type in Enum.GetValues<EventType>())
+                            {
+                                <option value="@type">@type.ToString()</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold small">Tarih</label>
+                        <input type="date" class="form-control" @bind="_event.EventDate" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold small">Konum</label>
+                        <input class="form-control" @bind="_event.Location" placeholder="Örn: Hilton Balo Salonu" />
                     </div>
 
-                    @foreach (var field in _fields)
-                    {
-                        <div class="row g-2 mb-2 p-2 border rounded bg-light align-items-center">
-                            <div class="col-md-5">
-                                <input class="form-control" @bind="field.Label" placeholder="Soru: Masa No, Yemek vb." />
+                    @* 2. DİNAMİK ALANLAR *@
+                    <div class="col-12 mt-4 pt-3 border-top">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="fw-bold mb-0 text-primary">Katılımcı Formu Özel Soruları</h6>
+                            <button type="button" class="btn btn-outline-warning btn-sm fw-bold" @onclick="AddField">+ Yeni
+                                Soru</button>
                             </div>
-                            <div class="col-md-3">
-                                <select class="form-select" @bind="field.FieldType">
-                                    <option value="Text">Metin</option>
-                                    <option value="Number">Sayı</option>
-                                    <option value="Boolean">Evet/Hayır</option>
-                                </select>
-                            </div>
-                            <div class="col-md-2 text-center">
-                                <div class="form-check form-switch d-inline-block mt-2">
-                                    <input class="form-check-input" type="checkbox" @bind="field.IsRequired" id="@field.Id">
-                                        <label class="form-check-label small" for="@field.Id">Zorunlu</label>
+                            @foreach (var field in _fields)
+                            {
+                                <div class="row g-2 mb-2 p-3 bg-light rounded align-items-center border border-white shadow-xs">
+                                    <div class="col-md-5">
+                                        <input class="form-control form-control-sm" @bind="field.Label"
+                                               placeholder="Soru: Masa No, Yemek vb." />
                                     </div>
-                                </div>
-                                <div class="col-md-2 text-end">
-                                    <button type="button" class="btn btn-outline-danger btn-sm border-0"
-                                            @onclick="() => _fields.Remove(field)">
-                                        <i class="oi oi-trash"></i>
-                                    </button>
-                                </div>
-                            </div>
-                        }
-                    </div>
-
-                    @* 3. EXCEL IMPORT (SADECE EDİT MODUNDA) *@
-                    @if (Id != 0)
-                    {
-                        <div class="col-12 mt-5">
-                            <div class="card border-primary bg-light shadow-sm">
-                                <div class="card-body p-4 text-center">
-                                    <h5 class="text-primary fw-bold mb-3"><i class="oi oi-cloud-upload me-2"></i>Davetli
-                                        Listesini Geri Yükle</h5>
-                                        <div class="d-flex justify-content-center align-items-center gap-3">
-                                            <InputFile OnChange="HandleFileSelected" class="form-control" style="max-width: 350px;"
-                                                       accept=".xlsx" />
-                                            <button type="button" class="btn btn-primary px-4" @onclick="UploadExcel"
-                                                    disabled="@(_selectedFile == null || _isImporting)">
-                                                @if (_isImporting)
-                                                {
-                                                    <span class="spinner-border spinner-border-sm me-2"></span>
-                                                }
-                                                <i class="oi oi-check me-2"></i>Listeyi Aktar
+                                    <div class="col-md-3">
+                                        <select class="form-select form-select-sm" @bind="field.FieldType">
+                                            <option value="Text">Metin</option>
+                                            <option value="Number">Sayı</option>
+                                            <option value="Boolean">Evet/Hayır</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="form-check form-switch mt-1">
+                                            <input class="form-check-input" type="checkbox" @bind="field.IsRequired">
+                                                <label class="small ms-1">Zorunlu</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-2 text-end">
+                                            <button type="button" class="btn btn-link text-danger p-0"
+                                                    @onclick="() => _fields.Remove(field)">
+                                                <i class="oi oi-trash"></i>
                                             </button>
                                         </div>
                                     </div>
+                                }
+                            </div>
+
+                            @* 3. EXCEL IMPORT *@
+                            @if (Id != 0)
+                            {
+                                <div class="col-12 mt-4">
+                                    <div class="p-4 bg-light rounded-3 border-dashed text-center">
+                                        <h6 class="fw-bold mb-3 text-dark"><i class="oi oi-cloud-upload me-2"></i>Davetli Listesini
+                                            Yükle</h6>
+                                            <div class="d-flex justify-content-center gap-2">
+                                                <InputFile OnChange="HandleFileSelected" class="form-control form-control-sm w-50"
+                                                           accept=".xlsx" />
+                                                <button type="button" class="btn btn-dark btn-sm px-4" @onclick="UploadExcel"
+                                                        disabled="@(_selectedFile == null || _isImporting)">
+                                                    @(_isImporting ? "Yükleniyor..." : "Listeyi Aktar")
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+
+                                @* 4. KAYDET *@
+                                <div class="col-12 text-end mt-4 border-top pt-4">
+                                    <button type="button" class="btn btn-link text-muted text-decoration-none me-3"
+                                            @onclick='() => NavManager.NavigateTo("/admin/events")'>Vazgeç</button>
+                                    <button type="button" class="btn btn-warning btn-lg px-5 shadow fw-bold" @onclick="SaveEvent"
+                                            disabled="@_isSaving">
+                                        @if (_isSaving)
+                                        {
+                                            <span class="spinner-border spinner-border-sm me-2"></span>
+                                        }
+                                        @(Id == 0 ? "Etkinliği Oluştur" : "Değişiklikleri Kaydet")
+                                    </button>
                                 </div>
                             </div>
-                        }
-
-                        @* 4. KAYDET BUTONU *@
-                        <div class="col-12 mt-5 pt-3 border-top text-end">
-                            <button type="button" class="btn btn-link text-secondary me-3 text-decoration-none"
-                                    @onclick='() => NavManager.NavigateTo("/admin/events")'>Vazgeç</button>
-                            <button type="button" class="btn btn-primary btn-lg px-5 shadow" @onclick="SaveEvent"
-                                    disabled="@_isSaving">
-                                @if (_isSaving)
-                                {
-                                    <span class="spinner-border spinner-border-sm me-2"></span>
-                                }
-                                @(Id == 0 ? "Etkinliği Oluştur" : "Değişiklikleri Kaydet")
-                            </button>
                         </div>
-
                     </div>
                 </div>
-            </div>
-        </div>
+
+                <style>
+                    .border-dashed {
+                        border: 2px dashed #dee2e6 !important;
+                    }
+
+                    .shadow-xs {
+                        box-shadow: 0 .125rem .25rem rgba(0, 0, 0, .04) !important;
+                    }
+                </style>
 
 @code {
     [Parameter] public int Id { get; set; }
@@ -175,7 +194,8 @@
             if (existing != null)
             {
                 _event = existing;
-                _fields = JsonSerializer.Deserialize<List<FormFieldDefinitionDto>>(_event.FormConfigJson) ?? new();
+                if (!string.IsNullOrEmpty(_event.FormConfigJson))
+                    _fields = JsonSerializer.Deserialize<List<FormFieldDefinitionDto>>(_event.FormConfigJson) ?? new();
             }
         }
     }
@@ -196,19 +216,15 @@
         if (_selectedFile == null) return;
         _isImporting = true;
         _errorMessage = null;
-        _importMessage = null;
 
         try
         {
-            // 1. Dosyayı asenkron olarak belleğe al (Bu UI'ı kitlemez)
             var buffer = new byte[_selectedFile.Size];
             using (var stream = _selectedFile.OpenReadStream(10 * 1024 * 1024))
             {
                 await stream.ReadAsync(buffer);
             }
 
-            // 2. AĞIR İŞLEMİ ARKA PLANA AT (Task.Run)
-            // Bu sayede 1000 kişi bile olsa UI loading animasyonu dönmeye devam eder
             var importedGuests = await Task.Run(() =>
             {
                 using var ms = new MemoryStream(buffer);
@@ -217,10 +233,8 @@
 
             if (importedGuests.Any())
             {
-                // 3. Veritabanı işlemleri (Asenkron - UI dostu)
                 foreach (var g in importedGuests) await GuestRepository.AddAsync(g);
                 await GuestRepository.SaveChangesAsync();
-
                 _importMessage = $"{importedGuests.Count} davetli başarıyla aktarıldı.";
             }
         }
@@ -232,7 +246,6 @@
         {
             _isImporting = false;
             _selectedFile = null;
-            StateHasChanged(); // UI mesajı görsün diye zorunlu
         }
     }
 
@@ -255,6 +268,10 @@
                 await EventRepository.SaveChangesAsync();
                 NavManager.NavigateTo("/admin/events");
             }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = "Kaydetme hatası: " + ex.Message;
         }
         finally { _isSaving = false; }
     }

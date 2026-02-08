@@ -34,4 +34,9 @@ public class Event : BaseEntity
         Type = type;
         IsActive = true;
     }
+
+    public string GenerateSlug(string name)
+    {
+        return name.ToLower().Replace(" ", "-").Replace("&", "ve"); // Basit bir örnek
+    }
 }

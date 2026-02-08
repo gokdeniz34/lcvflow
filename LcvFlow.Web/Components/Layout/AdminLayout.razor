@@ -1,52 +1,24 @@
 @inherits LayoutComponentBase
-@using Microsoft.AspNetCore.Components.Authorization
-@using Microsoft.AspNetCore.Components.Routing
 
-<div class="admin-container" style="display: flex; min-height: 100vh;">
-    <div class="sidebar bg-dark text-white p-3" style="width: 260px;">
-        <h4 class="text-center mb-4 border-bottom pb-3">LcvFlow Admin</h4>
-        <ul class="nav flex-column">
-            <li class="nav-item mb-2">
-                <NavLink class="nav-link text-white d-flex align-items-center" href="/admin/dashboard"
-                    Match="NavLinkMatch.All">
-                    <span class="me-2">📊</span> Dashboard
-                </NavLink>
-            </li>
-            <li class="nav-item mb-2">
-                <NavLink class="nav-link text-white d-flex align-items-center" href="/admin/guests">
-                    <span class="me-2">👥</span> Misafirler
-                </NavLink>
-            </li>
-            <li class="nav-item mb-2">
-                <NavLink class="nav-link text-white d-flex align-items-center" href="/admin/events">
-                    <span class="me-2">📅</span> Etkinliklerim
-                </NavLink>
-            </li>
-        </ul>
-        <hr />
-        <div class="mt-auto">
-            <a href="/api/auth/logout" class="btn btn-outline-danger w-100 btn-sm">
-                <i class="bi bi-box-arrow-right"></i> Çıkış Yap
-            </a>
-        </div>
+<div class="page d-flex" style="min-height: 100vh;">
+    @* Sidebar Sabit *@
+    <div class="sidebar" style="width: 280px; position: sticky; top: 0; height: 100vh;">
+        <NavMenu />
     </div>
 
-    <div class="main-content flex-grow-1 bg-light p-4">
-        <header class="d-flex justify-content-between align-items-center mb-4">
-            <h5 class="text-muted">Hoş geldin, Mentor!</h5>
+    @* İçerik Alanı *@
+    <main class="flex-grow-1 bg-light">
+        <header class="navbar navbar-expand navbar-light bg-white shadow-sm px-4 py-3 mb-4">
+            <div class="container-fluid">
+                <span class="text-muted fw-medium">Hoş geldin, <strong class="text-dark">Admin 👋</strong></span>
+                <div class="ms-auto d-flex align-items-center">
+                    <button class="btn btn-sm btn-outline-danger px-3">Güvenli Çıkış</button>
+                </div>
+            </div>
         </header>
-        @Body
-    </div>
+
+        <article class="content px-4">
+            @Body
+        </article>
+    </main>
 </div>
-
-<style>
-    .nav-link:hover {
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 8px;
-    }
-
-    .nav-link.active {
-        background: #0d6efd !important;
-        border-radius: 8px;
-    }
-</style>

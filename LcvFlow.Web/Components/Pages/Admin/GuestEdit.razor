@@ -1,0 +1,176 @@
+@page "/admin/guestedit/{Id:int}"
+@using LcvFlow.Domain.Entities
+@using LcvFlow.Domain.Interfaces
+@using LcvFlow.Service.Dtos.Admin
+@using System.Text.Json
+@inject IGuestRepository GuestRepository
+@inject IEventRepository EventRepository
+@inject NavigationManager NavManager
+
+<div class="container py-4">
+    <div class="mb-4">
+        <button class="btn btn-link text-warning p-0 text-decoration-none fw-bold shadow-none" @onclick="GoBack">
+            ← LİSTEYE DÖN
+        </button>
+        <h2 class="fw-bold text-dark mt-2">Davetli Düzenle</h2>
+        <p class="text-muted small">@_guest?.FirstName @_guest?.LastName kişisinin RSVP bilgilerini güncelliyorsunuz.
+        </p>
+    </div>
+
+    @if (_guest == null)
+    {
+        <div class="text-center p-5">
+            <div class="spinner-border text-warning"></div>
+        </div>
+    }
+    else
+    {
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-header bg-dark text-white py-3">
+                        <h5 class="mb-0">LCV Bilgileri</h5>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="row g-4">
+                            <div class="col-md-12">
+                                <label class="form-label fw-bold">Katılım Durumu</label>
+                                <select class="form-select form-select-lg border-2 border-warning" @bind="_status">
+                                    <option value="null">Bekleniyor</option>
+                                    <option value="true">Geliyor</option>
+                                    <option value="false">Gelemiyor</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Yetişkin Sayısı</label>
+                                <input type="number" class="form-control" @bind="_adultCount" min="0" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Çocuk Sayısı</label>
+                                <input type="number" class="form-control" @bind="_childCount" min="0" />
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label fw-bold">Misafir Notu</label>
+                                <textarea class="form-control" @bind="_note" rows="3"
+                                          placeholder="Misafirin ilettiği not..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                @if (_dynamicFields.Any())
+                {
+                    <div class="card shadow-sm border-0 mb-4">
+                        <div class="card-header bg-secondary text-white py-3">
+                            <h5 class="mb-0">Özel Alanlar (Dinamik)</h5>
+                        </div>
+                        <div class="card-body p-4">
+                            <div class="row g-3">
+                                @foreach (var field in _dynamicFields)
+                                {
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">@field.Label</label>
+                                        <input class="form-control" @bind="field.Value" />
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <div class="col-lg-4">
+                <div class="card shadow-sm border-0 bg-light p-4 sticky-top" style="top: 20px;">
+                    <h6 class="fw-bold mb-3 border-bottom pb-2">Kişi Bilgileri</h6>
+                    <p class="mb-1 small text-muted">Ad Soyad</p>
+                    <p class="fw-bold">@_guest.FirstName @_guest.LastName</p>
+
+                    <p class="mb-1 small text-muted">Telefon</p>
+                    <p class="fw-bold">@(_guest.PhoneNumber ?? "-")</p>
+
+                    <div class="d-grid gap-2 mt-4">
+                        <button class="btn btn-warning btn-lg fw-bold shadow-sm" @onclick="HandleSave">
+                            <i class="oi oi-circle-check me-2"></i>Kaydet
+                        </button>
+                        <button class="btn btn-outline-secondary" @onclick="GoBack">Vazgeç</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public int Id { get; set; }
+    private Guest? _guest;
+
+    private string _status = "null";
+    private int _adultCount;
+    private int _childCount;
+    private string? _note;
+    private List<DynamicFieldModel> _dynamicFields = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _guest = await GuestRepository.GetByIdAsync(Id);
+        if (_guest != null)
+        {
+            _status = _guest.IsAttending?.ToString().ToLower() ?? "null";
+            _adultCount = _guest.AdultCount;
+            _childCount = _guest.ChildCount;
+            _note = _guest.Note;
+
+            await LoadDynamicFields();
+        }
+    }
+
+    private async Task LoadDynamicFields()
+    {
+        if (_guest == null) return;
+        var ev = await EventRepository.GetByIdAsync(_guest.EventId);
+        if (ev != null && !string.IsNullOrEmpty(ev.FormConfigJson))
+        {
+            var config = JsonSerializer.Deserialize<List<FormFieldDefinitionDto>>(ev.FormConfigJson);
+            _guest.LoadAdditionalProperties();
+            _dynamicFields = config?.Select(f => new DynamicFieldModel
+            {
+                Label = f.Label,
+                Value = _guest.AdditionalProperties.ContainsKey(f.Label) ? _guest.AdditionalProperties[f.Label] : ""
+            }).ToList() ?? new();
+        }
+    }
+
+    private async Task HandleSave()
+    {
+        if (_guest == null) return;
+
+        bool? isAttendingValue = _status == "null" ? null : bool.Parse(_status);
+
+        if (isAttendingValue.HasValue)
+        {
+            var dynamicData = _dynamicFields.ToDictionary(x => x.Label, x => x.Value);
+            // Entity logic'ini çalıştırıyoruz
+            _guest.SubmitRsvp(isAttendingValue.Value, _adultCount, _childCount, _note, dynamicData);
+        }
+        else
+        {
+            _guest.UpdateRsvpStatus(null);
+        }
+
+        // DB operasyonu
+        GuestRepository.Update(_guest);
+        await GuestRepository.SaveChangesAsync();
+
+        GoBack();
+    }
+
+    private void GoBack() => NavManager.NavigateTo($"/admin/events/{_guest?.EventId}/guests");
+
+    public class DynamicFieldModel
+    {
+        public string Label { get; set; } = "";
+        public string Value { get; set; } = "";
+    }
+}

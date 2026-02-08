@@ -3,6 +3,7 @@ using LcvFlow.Service.Dtos.Admin;
 using LcvFlow.Service.Dtos.Guest;
 using LcvFlow.Service.Interfaces;
 using OfficeOpenXml;
+using System.Diagnostics;
 using System.Drawing;
 using System.Text.Json;
 
@@ -101,7 +102,6 @@ public class ExcelService : IExcelService
         {
             if (fileStream.CanSeek) fileStream.Position = 0;
 
-            // LoadAsync yerine doğrudan constructor kullanımı tam senkrondur
             using (var package = new ExcelPackage(fileStream))
             {
                 var worksheet = package.Workbook.Worksheets.FirstOrDefault(x => x.Name.Contains("Liste"))
@@ -154,19 +154,17 @@ public class ExcelService : IExcelService
     }
     public async Task<List<Guest>> ParseGuestExcelAsync(Stream fileStream, Event ev)
     {
-        // LİSANS BURADA OLMAZSA EPPLUS ÇÖKEBİLİR
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
         var guests = new List<Guest>();
-
+        var stopwatch = Stopwatch.StartNew(); // Süreyi başlat
         try
         {
-            // MemoryStream kullanımı zorunlu (Blazor Stream direkt okunamıyor demiştik)
             using (var package = new ExcelPackage())
             {
-                await package.LoadAsync(fileStream); // Bu metod daha güvenlidir
+                await package.LoadAsync(fileStream);
 
-                var worksheet = package.Workbook.Worksheets[0]; // 1 yerine 0. index dene (bazen fark eder)
+                var worksheet = package.Workbook.Worksheets[0];
                 if (worksheet == null) return guests;
 
                 var rowCount = worksheet.Dimension?.Rows ?? 0;
@@ -202,11 +200,27 @@ public class ExcelService : IExcelService
                     guest.SetImportedAdditionalData(additionalData);
                     guests.Add(guest);
                 }
+
+                stopwatch.Stop();
+
+                var log = new ImportLog
+                {
+                    EventId = ev.Id,
+                    ProcessingTimeMs = stopwatch.ElapsedMilliseconds,
+                    TotalRows = guests.Count
+                };
+                // _importLogRepository.Add(log);
             }
         }
         catch (Exception ex)
         {
-            // Log.Error(ex, "Excel Parse Hatası!");
+            var error = new SystemError
+            {
+                Source = "ExcelImport",
+                Message = ex.Message,
+                StackTrace = ex.StackTrace
+            };
+            // _errorRepository.Add(error);
             throw; // Buradan fırlat ki UI'daki try-catch yakalasın
         }
 

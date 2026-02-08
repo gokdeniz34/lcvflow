@@ -16,6 +16,70 @@
 <body>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="app.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        window.setupCharts = (doughnutData, barData) => {
+        // Önceki grafikleri yok et (Bellek sızıntısını ve üst üste binmeyi önler)
+        ['doughnutChart', 'barChart'].forEach(id => {
+        const canvas = document.getElementById(id);
+        if (canvas) {
+        const chart = Chart.getChart(canvas);
+        if (chart) chart.destroy();
+        }
+        });
+
+        // 1. Doughnut Chart (Küçük ve kompakt)
+        const ctxD = document.getElementById('doughnutChart');
+        if (ctxD) {
+        new Chart(ctxD, {
+        type: 'doughnut',
+        data: {
+        labels: ['Gelenler', 'Gelmeyenler', 'Bekleyenler'],
+        datasets: [{
+        data: doughnutData,
+        backgroundColor: ['#198754', '#dc3545', '#ffc107'],
+        hoverOffset: 10,
+        borderWidth: 2,
+        borderColor: '#ffffff'
+        }]
+        },
+        options: {
+        maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, padding: 20 } } }
+        }
+        });
+        }
+
+        // 2. Horizontal Bar Chart (Alt bölümde geniş yayılım)
+        const ctxB = document.getElementById('barChart');
+        if (ctxB) {
+        new Chart(ctxB, {
+        type: 'bar',
+        data: {
+        labels: barData.labels,
+        datasets: [{
+        label: 'Davetli Sayısı',
+        data: barData.counts,
+        backgroundColor: '#ffc107',
+        borderRadius: 6,
+        barThickness: 25
+        }]
+        },
+        options: {
+        indexAxis: 'y', // Yatay görünüm
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+        x: { grid: { display: false }, beginAtZero: true },
+        y: { grid: { display: false } }
+        }
+        }
+        });
+        }
+        };
+    </script>
+
     <Routes /> @* Sadece böyle bırak *@
     <script src="_framework/blazor.web.js"></script>
 </body>

@@ -20,4 +20,5 @@ public interface IAdminService
 
     // Toplu İşlemler
     Task<Result> AddBulkGuestsAsync(int eventId, List<CreateGuestDto> guests);
+    Task SeedDummyDataAsync(int eventId);
 }

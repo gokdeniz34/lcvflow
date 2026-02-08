@@ -76,4 +76,11 @@ public class Guest : BaseEntity
         AdditionalProperties = data;
         UpdateAdditionalDataJson();
     }
+
+    //seed işlemi için
+    public void UpdateRsvpStatus(bool? isAttending)
+    {
+        // Burada ileride "Etkinlik tarihi geçtiyse değiştirilemez" gibi kurallar eklenebilir.
+        IsAttending = isAttending;
+    }
 }
