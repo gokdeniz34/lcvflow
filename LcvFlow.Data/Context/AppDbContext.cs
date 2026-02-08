@@ -19,6 +19,7 @@ public class AppDbContext : DbContext
     //burası oldukça temiz olmalı. Tüm entity configurationları ayrı sınıflarda yapacağız ve burada sadece onları uygulayacağız.
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        
         //her sorguda silinmiş kayıtları hariç tutmak için global query filter ekle
         modelBuilder.Entity<Guest>().HasQueryFilter(g => !g.IsDeleted);
         modelBuilder.Entity<AdminUser>().HasQueryFilter(a => !a.IsDeleted);
