@@ -4,6 +4,7 @@ namespace LcvFlow.Domain.Common;
 
 public interface IRepository<T> : IQueryBuilder<T> where T : BaseEntity
 {
+    Task<IEnumerable<T>> GetAllAsync();
     Task<T?> GetByIdAsync(int id, CancellationToken ct = default);
     Task AddAsync(T entity, CancellationToken ct = default);
     Task AddRangeAsync(IEnumerable<T> entities, CancellationToken ct = default);

@@ -1,4 +1,5 @@
 ﻿using LcvFlow.Domain.Common;
+using LcvFlow.Domain.Enums;
 
 namespace LcvFlow.Domain.Entities;
 
@@ -9,16 +10,28 @@ public class Event : BaseEntity
     public string Location { get; set; } = null!;
     public string Slug { get; set; } = null!;
     public bool IsActive { get; set; } = true;
-    public virtual ICollection<Guest> Guests { get; set; } = [];
+    public EventType Type { get; set; }
+
+    // Adminin seçtiği form konfigürasyonu (JSON)
+    // Örn: {"AskAdultCount": true, "AskChildCount": false, "CustomQuestions": []}
+    public string FormConfigJson { get; set; } = "[]";
+
+    // Excel Şablonundaki "Yönerge Sayfası" için özel notlar
+    // Admin buraya "Lütfen sadece 18 yaş üstü misafirleri ekleyin" gibi notlar düşebilir.
+    public string? InstructionSheetNote { get; set; }
+
+    public virtual ICollection<Guest> Guests { get; set; } = new List<Guest>();
 
     private Event() { }
 
-    public Event(string name, DateTime eventDate, string location, string slug)
+    // Constructor'ı daha net hale getirdik: Tip artık zorunlu bir parametre gibi düşünülebilir.
+    public Event(string name, DateTime eventDate, string location, string slug, EventType type)
     {
-        Name = name;
+        Name = name ?? throw new ArgumentNullException(nameof(name));
         EventDate = eventDate;
-        Location = location;
-        Slug = slug;
+        Location = location ?? throw new ArgumentNullException(nameof(location));
+        Slug = slug ?? throw new ArgumentNullException(nameof(slug));
+        Type = type;
         IsActive = true;
     }
 }

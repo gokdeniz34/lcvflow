@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using FluentValidation;
 using LcvFlow.Domain.Common;
+using LcvFlow.Domain.Entities;
 using LcvFlow.Domain.Interfaces;
 using LcvFlow.Service.Dtos.Guest;
 using LcvFlow.Service.Interfaces;
@@ -11,14 +12,41 @@ namespace LcvFlow.Service.Concretes;
 public class GuestService : IGuestService
 {
     private readonly IGuestRepository _guestRepository;
+    private readonly IEventRepository _eventRepository;
+    private readonly IExcelService _excelService;
     private readonly IMapper _mapper;
     private readonly IValidator<GuestRsvpDto> _validator;
 
-    public GuestService(IGuestRepository guestRepository, IMapper mapper, IValidator<GuestRsvpDto> validator)
+    public GuestService(IGuestRepository guestRepository, IEventRepository eventRepository, IExcelService excelService, IMapper mapper, IValidator<GuestRsvpDto> validator)
     {
         _guestRepository = guestRepository;
+        _excelService = excelService;
         _mapper = mapper;
         _validator = validator;
+    }
+
+    public async Task<Result> ImportGuestsFromExcelAsync(int eventId, Stream excelStream)
+    {
+        // 1. Önce Event nesnesini bulmalıyız (ExcelService artık Event nesnesi istiyor)
+        var ev = await _eventRepository.GetByIdAsync(eventId);
+        if (ev == null) return Result.Failure("Etkinlik bulunamadı.");
+
+        // 2. ParseGuestExcelAsync metoduna stream ve event nesnesini gönderiyoruz
+        // Not: ExcelService içindeki metod artık List<Guest> dönüyor demiştik.
+        var guests = await _excelService.ParseGuestExcelAsync(excelStream, ev);
+
+        if (guests == null || !guests.Any())
+            return Result.Failure("Excel'de aktarılacak veri bulunamadı.");
+
+        // 3. Veritabanına toplu ekleme
+        foreach (var guest in guests)
+        {
+            await _guestRepository.AddAsync(guest);
+        }
+
+        await _guestRepository.SaveChangesAsync();
+
+        return Result.Success($"{guests.Count} davetli başarıyla içeri aktarıldı.");
     }
 
     public Task<Result<bool>> AddBulkGuestsAsync(List<GuestRsvpDto> guests, int eventId)

@@ -18,6 +18,10 @@ public abstract class EfRepository<T> : IRepository<T> where T : BaseEntity
     }
 
     public IQueryable<T> Query() => _dbSet.AsQueryable();
+    public async Task<IEnumerable<T>> GetAllAsync()
+    {
+        return await _context.Set<T>().ToListAsync();
+    }
     public async Task<T?> GetByIdAsync(int id, CancellationToken ct = default)
         => await _dbSet.FindAsync(new object[] { id }, ct);
 

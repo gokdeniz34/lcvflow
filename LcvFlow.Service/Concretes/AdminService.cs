@@ -59,7 +59,10 @@ public class AdminService : IAdminService
     {
         try
         {
-            var guest = new Guest(dto.FirstName, dto.LastName, dto.EventId);
+            // GÜNCELLEME: Constructor sırası -> (eventId, firstName, lastName, phone)
+            // DTO'da phone yoksa boş string gönderiyoruz
+            var guest = new Guest(dto.EventId, dto.FirstName, dto.LastName, "");
+
             await _guestRepository.AddAsync(guest);
             await _guestRepository.SaveChangesAsync();
             return Result<string>.Success(guest.AccessToken);
@@ -67,6 +70,25 @@ public class AdminService : IAdminService
         catch (Exception ex)
         {
             return Result<string>.Failure($"Misafir oluşturulamadı: {ex.Message}");
+        }
+    }
+
+    public async Task<Result> AddBulkGuestsAsync(int eventId, List<CreateGuestDto> guests)
+    {
+        try
+        {
+            foreach (var dto in guests)
+            {
+                // GÜNCELLEME: Constructor sırası
+                var guest = new Guest(eventId, dto.FirstName, dto.LastName, "");
+                await _guestRepository.AddAsync(guest);
+            }
+            await _guestRepository.SaveChangesAsync();
+            return Result.Success();
+        }
+        catch (Exception ex)
+        {
+            return Result.Failure($"Toplu ekleme hatası: {ex.Message}");
         }
     }
 
@@ -105,37 +127,8 @@ public class AdminService : IAdminService
         }
     }
 
-    public async Task<Result<int>> CreateEventAsync(CreateEventDto dto)
+    public Task<Result<int>> CreateEventAsync(CreateEventDto dto)
     {
-        try
-        {
-            var slug = dto.Name.ToSlug();
-            var @event = new Event(dto.Name, dto.EventDate, dto.Location, slug);
-            await _eventRepository.AddAsync(@event);
-            await _eventRepository.SaveChangesAsync();
-            return Result<int>.Success(@event.Id);
-        }
-        catch (Exception ex)
-        {
-            return Result<int>.Failure($"Etkinlik hatası: {ex.Message}");
-        }
-    }
-
-    public async Task<Result> AddBulkGuestsAsync(int eventId, List<CreateGuestDto> guests)
-    {
-        try
-        {
-            foreach (var dto in guests)
-            {
-                var guest = new Guest(dto.FirstName, dto.LastName, eventId);
-                await _guestRepository.AddAsync(guest);
-            }
-            await _guestRepository.SaveChangesAsync();
-            return Result.Success();
-        }
-        catch (Exception ex)
-        {
-            return Result.Failure($"Toplu ekleme hatası: {ex.Message}");
-        }
+        throw new NotImplementedException();
     }
 }

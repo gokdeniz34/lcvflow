@@ -13,6 +13,7 @@ public class Result
     }
 
     public static Result Success() => new(true, null);
+    public static Result Success(string message) => new(true, message);
     public static Result Failure(string message) => new(false, message);
 }
 

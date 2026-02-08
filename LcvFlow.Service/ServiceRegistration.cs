@@ -16,6 +16,7 @@ public static class ServiceRegistration
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IGuestService, GuestService>();
         services.AddScoped<IAdminService, AdminService>();
+        services.AddScoped<IExcelService, ExcelService>();
         // services.AddScoped<IGuestService, GuestService>();
 
         return services;
